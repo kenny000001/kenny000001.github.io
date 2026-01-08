@@ -2,429 +2,511 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KMnO4 MC服务器 - 状态检测</title>
-    <!-- 网页图标 -->
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239333EA'%3E%3Cpath d='M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM4 5h4v4H4V5zm0 6h4v4H4v-4zm0 6h4v4H4v-4zm16 0h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V5h4v4z'/%3E%3C/svg%3E" type="image/svg+xml">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>KMnO4 MC服务器 - 主页</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239333EA'%3E%3Cpath d='M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM4 5h4v4H4V5zm0 6h4v4H4v-4zm0 6h4v4H4v-4zm16 0h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V5h4v4z'/%3E%3C/svg%3E" type="image/svg+xml">
     <style>
-        /* 刷新旋转动画 */
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .mobile-stack {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .mobile-text-center {
+                text-align: center !important;
+            }
+            .mobile-full-width {
+                width: 100% !important;
+            }
+            .mobile-mb-2 {
+                margin-bottom: 0.5rem !important;
+            }
+            .mobile-p-4 {
+                padding: 1rem !important;
+            }
+            .mobile-space-y-4 > * + * {
+                margin-top: 1rem !important;
+            }
+            .mobile-hide {
+                display: none !important;
+            }
+            .mobile-show {
+                display: block !important;
+            }
+        }
+        
+        /* Markdown 内容样式 */
+        .markdown-content {
+            line-height: 1.8;
+            color: #333;
+        }
+        .markdown-content h1, 
+        .markdown-content h2, 
+        .markdown-content h3 {
+            color: #9333ea;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: bold;
+        }
+        .markdown-content h1 {
+            font-size: 1.75rem;
+            border-bottom: 2px solid #e9d5ff;
+            padding-bottom: 0.5rem;
+        }
+        .markdown-content h2 {
+            font-size: 1.5rem;
+            border-bottom: 1px solid #f3e8ff;
+            padding-bottom: 0.3rem;
+        }
+        .markdown-content h3 {
+            font-size: 1.25rem;
+        }
+        .markdown-content p {
+            margin-bottom: 1rem;
+        }
+        .markdown-content ul, 
+        .markdown-content ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .markdown-content li {
+            margin-bottom: 0.5rem;
+        }
+        .markdown-content code {
+            background-color: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+        .markdown-content pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        .markdown-content blockquote {
+            border-left: 4px solid #9333ea;
+            padding-left: 1rem;
+            margin-left: 0;
+            margin-right: 0;
+            color: #666;
+            font-style: italic;
+        }
+        .markdown-content a {
+            color: #9333ea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .markdown-content a:hover {
+            text-decoration: underline;
+            color: #7e22ce;
+        }
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        .markdown-content th, 
+        .markdown-content td {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .markdown-content th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        /* 加载动画 */
+        .loading-spinner {
+            border: 4px solid rgba(147, 51, 234, 0.1);
+            border-left: 4px solid #9333ea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .loading-spinner {
-            animation: spin 1s linear infinite;
-            display: inline-block;
+        
+        /* 卡片悬停效果 */
+        .hover-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        /* 状态卡片过渡动画 */
-        .status-card {
-            transition: all 0.5s ease;
-            display: block; /* 强制块级元素 */
-            width: 100%; /* 宽度100% */
-            margin-bottom: 1rem; /* 卡片间距 */
-        }
-        .status-loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-        /* Motd样式：强制黑色 + 独立行 */
-        .motd-card {
-            min-height: 60px;
-            padding: 1rem;
-            background: #f3f4f6;
-            border-radius: 0.5rem;
-        }
-        .motd-content {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            line-height: 1.5;
-            font-size: 15px;
-            font-weight: 600;
-            color: #000000 !important;
-        }
-        /* 玩家列表样式：Motd下方独立完整行，和Motd同样式 */
-        .players-list-card {
-            min-height: 60px;
-            padding: 1rem;
-            background: #f3f4f6;
-            border-radius: 0.5rem;
-            margin-top: 1rem !important; /* 强制和Motd拉开间距 */
-        }
-        .players-list-content {
-            line-height: 1.5;
-            font-size: 15px;
-            font-weight: 500;
-            color: #333333;
-        }
-        /* 基础状态卡片容器（4列） */
-        .basic-status-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        .basic-status-card {
-            padding: 1rem;
-            background: #f3f4f6;
-            border-radius: 0.5rem;
-        }
-        /* 异常/正常状态样式 */
-        .text-error {
-            color: #dc2626 !important; /* 红色 */
-            font-weight: 600;
-        }
-        .text-success {
-            color: #16a34a !important;
-            font-weight: 600;
-        }
-        .text-info {
-            color: #2563eb !important;
-            font-weight: 500;
+        .hover-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
     </style>
     <script>
-        // ===================== 配置项（保持不变） =====================
-        const SERVER_LINES = [
-            { name: "主线路", ip: "nb.2.frp.one", port: 50120 },
-            { name: "备用线路1", ip: "sz.frp.one", port: 47942 },
-            { name: "备用线路2", ip: "cd.4.frp.one", port: 34769 }
-        ];
-        const REFRESH_INTERVAL = 30000; // 30秒自动刷新
-        const SERVER_MAIN_PROTOCOL = "Java"; // 主协议（MC分为Java/BE（基岩）协议）
-        const REQUEST_TIMEOUT = 8000;
-        const MC_STATUS_API = "https://api.mcstatus.io/v2/status/java/";
-        // ===================== 配置结束 =====================
-
-        let currentLineIndex = 0;
-        let refreshTimer = null;
-        let countdownTimer = null;
-        let remainingSeconds = 30;
-
-        // 核心修复：增强版本提取容错，避免不必要的1.0.x兜底，优先捕获实际版本
-        function parseServerProtocol(protocolData) {
-            // 步骤1：增强版本匹配，支持更多格式，提高有效版本捕获率
-            let mcCoreVersion = "1.20"; // 改为MC主流版本兜底，替代1.0（更贴合实际场景）
-            if (protocolData?.name) {
-                // 优化正则1：先匹配完整数字版本（1.12、1.12.2、1.21.10等，所有位数）
-                const fullVersionMatch = protocolData.name.match(/\d+\.\d+(\.\d+)*(\.\d+)*/);
-                if (fullVersionMatch) {
-                    // 提取「主版本.次版本」核心部分（无论后续有多少修订版本）
-                    const coreVersionMatch = fullVersionMatch[0].match(/\d+\.\d+/);
-                    if (coreVersionMatch) {
-                        mcCoreVersion = coreVersionMatch[0];
-                    }
-                }
-                // 补充：如果完整版本匹配失败，再尝试原有核心匹配，双重保障
-                else if (!fullVersionMatch) {
-                    const coreVersionFallback = protocolData.name.match(/\d+\.\d+/);
-                    if (coreVersionFallback) {
-                        mcCoreVersion = coreVersionFallback[0];
-                    }
-                }
-            }
-            // 统一格式化为「x.y.x」（如1.12→1.12.x、1.21→1.21.x、1.16→1.16.x）
-            const formattedMcVersion = `${mcCoreVersion}.x`;
-
-            // 步骤2：提取协议版本号（保持不变）
-            let protocolVersion = "通用协议";
-            if (protocolData?.protocol) {
-                protocolVersion = `协议版本${protocolData.protocol}`;
-            }
-
-            // 步骤3：拼接最终格式（保持不变）
-            return `${formattedMcVersion}(${protocolVersion})`;
-        }
-
-        // 解析Motd：保持不变
-        function parseServerMotd(motdRaw) {
-            if (!motdRaw) return "无描述信息";
-            let cleanMotd = "";
-            if (typeof motdRaw === 'string') {
-                cleanMotd = motdRaw.replace(/§[0-9a-fk-or]/gi, '').trim();
-            } else if (motdRaw.clean) {
-                cleanMotd = motdRaw.clean.trim();
-            } else if (motdRaw.raw) {
-                cleanMotd = motdRaw.raw.replace(/§[0-9a-fk-or]/gi, '').trim();
-            }
-            return cleanMotd || "无描述信息";
-        }
-
-        // 解析玩家列表：保持不变
-        function parsePlayersList(playersData) {
-            const onlineCount = playersData?.online || 0;
-            if (onlineCount === 0) {
-                return "<span class='text-info'>暂无在线玩家</span>";
-            }
-            if (!playersData?.list || !Array.isArray(playersData.list) || playersData.list.length === 0) {
-                return `<span class='text-info'>共 ${onlineCount} 名玩家在线（服务器隐藏了玩家列表）</span>`;
-            }
-            const playerNames = playersData.list.map((player, index) => 
-                `<div>${index + 1}. ${player.name || '未知玩家'}</div>`
-            ).join("");
-            return playerNames || "<span class='text-info'>暂无在线玩家</span>";
-        }
-
-        // 自定义延迟检测：保持不变
-        async function getRequestLatency(ip, port) {
-            const startTime = Date.now();
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-                const requestUrl = `${MC_STATUS_API}${ip}:${port}`;
-                
-                await fetch(requestUrl, {
-                    signal: controller.signal,
-                    cache: 'no-cache',
-                    method: 'GET'
-                });
-                clearTimeout(timeoutId);
-                return Date.now() - startTime;
-            } catch (error) {
-                return -1;
-            }
-        }
-
-        // 更新服务器地址：保持不变
-        function updateServerAddressDisplay(ip, port) {
-            document.getElementById('server-address').textContent = `${SERVER_MAIN_PROTOCOL} | ${ip}:${port}`;
-        }
-
-        // 更新倒计时：保持不变
-        function updateCountdownDisplay() {
-            document.getElementById('refresh-countdown').textContent = `自动刷新剩余：${remainingSeconds}秒`;
-        }
-
-        // 重置倒计时：保持不变
-        function resetCountdown() {
-            if (countdownTimer) clearInterval(countdownTimer);
-            remainingSeconds = 30;
-            updateCountdownDisplay();
-            countdownTimer = setInterval(() => {
-                remainingSeconds--;
-                updateCountdownDisplay();
-                if (remainingSeconds < 0) remainingSeconds = 0;
-            }, 1000);
-        }
-
-        // ========== 核心检测逻辑（仅修复版本兜底，其他保持不变） ==========
-        async function forceFullCheck(serverIp, serverPort) {
-            const serverStatusEl = document.getElementById('server-status');
-            const serverPlayersEl = document.getElementById('server-players');
-            const serverLatencyEl = document.getElementById('server-latency');
-            const serverProtocolEl = document.getElementById('server-protocol');
-            const motdElement = document.getElementById('server-motd');
-            const playersListElement = document.getElementById('server-players-list');
+        // 加载并渲染 Markdown 文件 - 修复版本
+        function loadMarkdownContent() {
+            const contentContainer = document.getElementById('markdown-content');
+            const loadingElement = document.getElementById('loading-indicator');
+            const errorElement = document.getElementById('error-message');
             
-            const allCards = document.querySelectorAll('.status-card, .basic-status-card');
-            
-            // 加载状态
-            serverStatusEl.innerHTML = '<i class="fa-solid fa-circle-notch loading-spinner text-blue-500"></i> 正在检测...';
-            serverPlayersEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
-            serverLatencyEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
-            serverProtocolEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
-            motdElement.textContent = '检测中...';
-            playersListElement.innerHTML = '<span style="color: #999;">检测中...</span>';
-            allCards.forEach(card => card.classList.add('status-loading'));
-
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-                const requestUrl = `${MC_STATUS_API}${serverIp}:${serverPort}`;
+            // 方法1: 尝试使用XMLHttpRequest（兼容本地文件系统）
+            function loadWithXHR() {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', 'index.md', true);
+                xhr.timeout = 5000; // 5秒超时
                 
-                const response = await fetch(requestUrl, {
-                    signal: controller.signal,
-                    cache: 'no-cache',
-                    method: 'GET'
-                });
-
-                clearTimeout(timeoutId);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log("=== API原始返回数据 ===", data);
-                    console.log("版本相关完整数据：", data.version);
-                    
-                    if (data.online === true) {
-                        // 服务器在线：修复后版本正常显示
-                        serverStatusEl.innerHTML = '<i class="fa-solid fa-circle text-success"></i> <span class="text-success">服务器在线</span>';
-                        const hasPlayers = data.players && typeof data.players.online === 'number' && typeof data.players.max === 'number';
-                        serverPlayersEl.textContent = hasPlayers ? `${data.players.online}/${data.players.max}` : '<span class="text-error">--/--</span>';
-                        let latency = data.latency || await getRequestLatency(serverIp, serverPort);
-                        serverLatencyEl.innerHTML = (latency > 0 && !isNaN(latency)) 
-                            ? `<span class="text-success">${latency} ms</span>` 
-                            : '<span class="text-error">获取失败</span>';
-                        // 修复后版本格式显示（避免1.0.x）
-                        const serverProtocol = parseServerProtocol(data.version || {});
-                        serverProtocolEl.innerHTML = `<span class="text-success">${serverProtocol}</span>`;
-                        motdElement.textContent = parseServerMotd(data.motd);
-                        playersListElement.innerHTML = parsePlayersList(data.players || {});
-
+                xhr.onload = function() {
+                    if (xhr.status === 200 || xhr.status === 0) {
+                        // 成功加载
+                        const markdownText = xhr.responseText;
+                        const html = simpleMarkdownParser(markdownText);
+                        
+                        // 插入内容
+                        contentContainer.innerHTML = html;
+                        loadingElement.style.display = 'none';
+                        contentContainer.classList.remove('hidden');
                     } else {
-                        // 服务器离线：仍显示红色---
-                        serverStatusEl.innerHTML = '<i class="fa-solid fa-circle text-error"></i> <span class="text-error">服务器离线</span>';
-                        serverPlayersEl.innerHTML = '<span class="text-error">--/--</span>';
-                        serverLatencyEl.innerHTML = '<span class="text-error">---</span>';
-                        serverProtocolEl.innerHTML = '<span class="text-error">---</span>';
-                        motdElement.innerHTML = '<span class="text-error">--</span>';
-                        playersListElement.innerHTML = '<span class="text-error">--</span>';
+                        // 加载失败
+                        showFallbackContent();
                     }
-                } else {
-                    throw new Error(`API返回错误：${response.status}`);
-                }
-            } catch (error) {
-                // 连接失败：仍显示红色---
-                console.log("检测失败:", error);
-                serverStatusEl.innerHTML = '<i class="fa-solid fa-circle text-error"></i> <span class="text-error">连接失败</span>';
-                serverPlayersEl.innerHTML = '<span class="text-error">--/--</span>';
-                serverLatencyEl.innerHTML = '<span class="text-error">获取失败</span>';
-                serverProtocolEl.innerHTML = '<span class="text-error">---</span>';
-                motdElement.innerHTML = '<span class="text-error">--</span>';
-                playersListElement.innerHTML = '<span class="text-error">--</span>';
-            } finally {
-                allCards.forEach(card => card.classList.remove('status-loading'));
+                };
+                
+                xhr.onerror = function() {
+                    showFallbackContent();
+                };
+                
+                xhr.ontimeout = function() {
+                    showFallbackContent();
+                };
+                
+                xhr.send();
             }
-        }
-
-        // 统一刷新触发：保持不变
-        function triggerRefresh() {
-            const selectedServer = SERVER_LINES[currentLineIndex];
-            forceFullCheck(selectedServer.ip, selectedServer.port);
-            resetCountdown();
-        }
-
-        // 切换线路：保持不变
-        function switchServerLine(index) {
-            currentLineIndex = index;
-            document.querySelectorAll('.line-btn').forEach((btn, i) => {
-                btn.className = i === index 
-                    ? 'line-btn bg-purple-600 text-white px-4 py-2 rounded-md transition-all' 
-                    : 'line-btn bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition-all';
-            });
-            const selectedServer = SERVER_LINES[index];
-            updateServerAddressDisplay(selectedServer.ip, selectedServer.port);
-            triggerRefresh();
             
-            if (refreshTimer) clearInterval(refreshTimer);
-            refreshTimer = setInterval(triggerRefresh, REFRESH_INTERVAL);
-        }
-
-        // 页面初始化：保持不变
-        window.onload = function() {
-            const lineContainer = document.getElementById('server-lines');
-            SERVER_LINES.forEach((line, index) => {
-                const btn = document.createElement('button');
-                btn.className = index === 0 
-                    ? 'line-btn bg-purple-600 text-white px-4 py-2 rounded-md transition-all' 
-                    : 'line-btn bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition-all';
-                btn.textContent = line.name;
-                btn.onclick = () => switchServerLine(index);
-                lineContainer.appendChild(btn);
-            });
-
-            const defaultServer = SERVER_LINES[0];
-            updateServerAddressDisplay(defaultServer.ip, defaultServer.port);
+            // 方法2: 备用方法 - 使用fetch（需要服务器环境）
+            function loadWithFetch() {
+                fetch('index.md')
+                    .then(response => {
+                        if (response.ok) return response.text();
+                        throw new Error('文件加载失败');
+                    })
+                    .then(markdownText => {
+                        const html = simpleMarkdownParser(markdownText);
+                        contentContainer.innerHTML = html;
+                        loadingElement.style.display = 'none';
+                        contentContainer.classList.remove('hidden');
+                    })
+                    .catch(error => {
+                        console.log('Fetch失败，尝试XMLHttpRequest:', error);
+                        loadWithXHR();
+                    });
+            }
             
-            triggerRefresh();
-            refreshTimer = setInterval(triggerRefresh, REFRESH_INTERVAL);
-            resetCountdown();
-        };
+            // 显示备用内容
+            function showFallbackContent() {
+                loadingElement.style.display = 'none';
+                errorElement.classList.remove('hidden');
+                errorElement.innerHTML = `
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                        <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-3xl mb-4"></i>
+                        <h3 class="text-lg font-bold text-yellow-700 mb-2">Markdown文件加载提示</h3>
+                        <p class="text-yellow-600 mb-4">为了正常加载index.md文件，请使用以下方法：</p>
+                        <div class="text-left bg-white p-4 rounded-md mb-4">
+                            <h4 class="font-bold mb-2">方法一：使用本地HTTP服务器</h4>
+                            <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                                <li>在文件所在目录打开终端/命令提示符</li>
+                                <li>运行命令: <code class="bg-gray-100 px-2 py-1 rounded">python -m http.server 8080</code></li>
+                                <li>在浏览器中访问: <code class="bg-gray-100 px-2 py-1 rounded">http://localhost:8080</code></li>
+                            </ol>
+                            <h4 class="font-bold mt-4 mb-2">方法二：使用备用内容</h4>
+                            <p class="text-sm text-gray-700">如果不想启动服务器，请点击下方按钮使用备用内容。</p>
+                        </div>
+                        <div class="flex flex-wrap gap-3 justify-center">
+                            <button onclick="showDefaultContent()" class="bg-purple-600 text-white px-5 py-2 rounded-md hover:bg-purple-700 transition-all">
+                                <i class="fa-solid fa-file-alt mr-2"></i>显示备用内容
+                            </button>
+                            <a href="status.html" class="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 transition-all">
+                                <i class="fa-solid fa-satellite-dish mr-2"></i>查看服务器状态
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 显示默认内容
+            window.showDefaultContent = function() {
+                errorElement.classList.add('hidden');
+                const defaultContent = `
+                    <h1>欢迎来到KMnO4 MC服务器</h1>
+                    
+                    <p>KMnO4 MC服务器是一个专注于创造与探索的Minecraft游戏社区。我们致力于为玩家提供稳定、友好的游戏环境，让每位玩家都能在这里找到属于自己的乐趣。</p>
+                    
+                    <h2>🎮 服务器特色</h2>
+                    
+                    <h3>1. 稳定运行</h3>
+                    <ul>
+                        <li>24/7不间断运行，专业服务器硬件保障</li>
+                        <li>多重备用线路，确保随时可连接</li>
+                        <li>定期备份，数据安全有保障</li>
+                    </ul>
+                    
+                    <h3>2. 友好社区</h3>
+                    <ul>
+                        <li>活跃的玩家交流群</li>
+                        <li>新手友好，有专门的引导教程</li>
+                        <li>定期举办社区活动</li>
+                    </ul>
+                    
+                    <h3>3. 优质游戏体验</h3>
+                    <ul>
+                        <li>精心调优的游戏参数</li>
+                        <li>公平的游戏环境</li>
+                        <li>丰富的游戏内容</li>
+                    </ul>
+                    
+                    <h2>🚀 快速开始</h2>
+                    
+                    <h3>第一步：下载客户端</h3>
+                    <p>前往<a href="download.html">下载页面</a>获取专属客户端，客户端已集成所有必要组件。</p>
+                    
+                    <h3>第二步：查看服务器状态</h3>
+                    <p>在<a href="status.html">状态页面</a>可以实时查看服务器运行情况，包括在线人数、延迟等信息。</p>
+                    
+                    <h3>第三步：加入游戏</h3>
+                    <ol>
+                        <li>启动Minecraft客户端</li>
+                        <li>添加服务器地址：<code>nb.2.frp.one:50120</code></li>
+                        <li>点击加入，开始你的冒险！</li>
+                    </ol>
+                    
+                    <h2>📞 联系我们</h2>
+                    
+                    <ul>
+                        <li><strong>官方网站</strong>：<a href="index.html">KMnO4 MC服务器</a></li>
+                        <li><strong>状态查询</strong>：<a href="status.html">服务器状态</a></li>
+                        <li><strong>客户端下载</strong>：<a href="download.html">下载页面</a></li>
+                    </ul>
+                    
+                    <blockquote>
+                        <strong>温馨提示</strong>：请遵守服务器规则，文明游戏，共同营造友好的游戏环境。祝您游戏愉快！
+                    </blockquote>
+                `;
+                
+                contentContainer.innerHTML = defaultContent;
+                contentContainer.classList.remove('hidden');
+            };
+            
+            // 先尝试fetch，失败后使用XHR
+            loadWithFetch();
+        }
+        
+        // 简单的 Markdown 解析器
+        function simpleMarkdownParser(markdown) {
+            // 替换标题
+            let html = markdown
+                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^#### (.*$)/gm, '<h4>$1</h4>');
+            
+            // 替换粗体
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // 替换斜体
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // 替换行内代码
+            html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+            
+            // 替换链接
+            html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+            
+            // 替换无序列表
+            html = html.replace(/^\s*\*\s(.*$)/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>\s*)+/g, '<ul>$&</ul>');
+            
+            // 替换有序列表
+            html = html.replace(/^\s*\d+\.\s(.*$)/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>\s*)+/g, '<ol>$&</ol>');
+            
+            // 替换段落
+            html = html.replace(/^\s*([^<].*[^>])\s*$/gm, '<p>$1</p>');
+            
+            // 清理多余的空行和标签
+            html = html.replace(/\n\s*\n/g, '\n');
+            html = html.replace(/<\/ul>\s*<ul>/g, '');
+            html = html.replace(/<\/ol>\s*<ol>/g, '');
+            
+            return html;
+        }
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载Markdown内容
+            loadMarkdownContent();
+            
+            // 移动端导航菜单切换
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    const isHidden = mobileMenu.classList.contains('hidden');
+                    if (isHidden) {
+                        mobileMenu.classList.remove('hidden');
+                        mobileMenuBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
+                    } else {
+                        mobileMenu.classList.add('hidden');
+                        mobileMenuBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                    }
+                });
+            }
+            
+            // 点击菜单项后自动关闭移动端菜单
+            const mobileMenuLinks = document.querySelectorAll('#mobile-menu a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenuBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                });
+            });
+        });
     </script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col p-4 md:p-8">
-    <header class="bg-purple-700 text-white py-4 px-6 rounded-lg shadow-md mb-6">
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-purple-700 text-white py-4 px-6 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold"><i class="fa-solid fa-server mr-2"></i>KMnO4 MC服务器</h1>
-            <nav>
-                <a href="#status" class="text-white hover:text-purple-200 mx-2">服务器状态</a>
-                <a href="#download" class="text-white hover:text-purple-200 mx-2">客户端下载</a>
+            <h1 class="text-2xl font-bold flex items-center">
+                <i class="fa-solid fa-server mr-2"></i>
+                <span class="mobile-text-center">KMnO4 MC服务器</span>
+            </h1>
+            
+            <!-- 桌面端导航 -->
+            <nav class="hidden md:block">
+                <a href="index.html" class="text-white hover:text-purple-200 mx-2 font-medium">主页</a>
+                <a href="status.html" class="text-white hover:text-purple-200 mx-2 font-medium">服务器状态</a>
+                <a href="download.html" class="text-white hover:text-purple-200 mx-2 font-medium">客户端下载</a>
             </nav>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-btn" class="md:hidden text-white text-2xl">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端菜单 -->
+        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-2">
+            <div class="flex flex-col space-y-3">
+                <a href="index.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">主页</a>
+                <a href="status.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">服务器状态</a>
+                <a href="download.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">客户端下载</a>
+            </div>
         </div>
     </header>
 
-    <main class="flex-grow container mx-auto">
-        <section id="status" class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">服务器状态检测</h2>
-            
-            <div class="mb-6 flex flex-wrap gap-3 items-center justify-between">
-                <div id="server-lines" class="flex gap-2"></div>
-                <div class="flex items-center gap-4">
-                    <span id="refresh-countdown" class="text-gray-600 text-sm">自动刷新剩余：30秒</span>
-                    <button onclick="triggerRefresh()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-arrows-rotate"></i> 手动刷新
-                    </button>
-                </div>
-            </div>
-
-            <div class="mb-6 p-3 bg-gray-100 rounded-md">
-                <p class="text-gray-600 text-sm mb-1">服务器地址</p>
-                <p id="server-address" class="text-lg font-bold text-purple-700">加载中...</p>
-            </div>
-
-            <div class="basic-status-container mb-6">
-                <div class="basic-status-card">
-                    <p class="text-gray-600 text-sm mb-1">服务器状态</p>
-                    <p id="server-status" class="text-lg font-bold">检测中...</p>
-                </div>
-                <div class="basic-status-card">
-                    <p class="text-gray-600 text-sm mb-1">在线人数</p>
-                    <p id="server-players" class="text-lg font-bold">---</p>
-                </div>
-                <div class="basic-status-card">
-                    <p class="text-gray-600 text-sm mb-1">延迟</p>
-                    <p id="server-latency" class="text-lg font-bold">---</p>
-                </div>
-                <div class="basic-status-card">
-                    <p class="text-gray-600 text-sm mb-1">服务器版本（协议）</p>
-                    <p id="server-protocol" class="text-lg font-bold">---</p>
-                </div>
-            </div>
-
-            <div class="status-card motd-card mb-0">
-                <p class="text-gray-600 text-sm mb-2">服务器Motd</p>
-                <div id="server-motd" class="motd-content">---</div>
-            </div>
-
-            <div class="status-card players-list-card">
-                <p class="text-gray-600 text-sm mb-2">在线玩家列表</p>
-                <div id="server-players-list" class="players-list-content">---</div>
-            </div>
-        </section>
-
-        <section id="download" class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">客户端下载</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all">
-                    <div class="text-center mb-4">
-                        <i class="fa-solid fa-desktop text-4xl text-purple-600"></i>
-                        <h3 class="text-lg font-bold mt-2">电脑端客户端</h3>
-                    </div>
-                    <p class="text-gray-600 text-center mb-4">适配Windows/macOS/Linux系统</p>
-                    <div class="text-center">
-                        <a href="download.html" class="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition-all">
-                            <i class="fa-solid fa-download mr-2"></i>立即下载
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 md:px-8 py-6 md:py-8">
+        <!-- 欢迎横幅 -->
+        <div class="mb-8 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl p-6 md:p-8 shadow-lg hover-card">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                <div class="md:w-2/3 mb-6 md:mb-0 mobile-text-center md:text-left">
+                    <h2 class="text-2xl md:text-3xl font-bold mb-3">欢迎来到KMnO4 MC服务器</h2>
+                    <p class="text-lg opacity-90 mb-4">一个充满创意与探索的Minecraft社区</p>
+                    <div class="flex flex-wrap gap-3 mobile-stack mobile-text-center">
+                        <a href="status.html" class="bg-white text-purple-700 px-5 py-2 rounded-md hover:bg-gray-100 transition-all font-medium">
+                            <i class="fa-solid fa-satellite-dish mr-2"></i>查看服务器状态
+                        </a>
+                        <a href="download.html" class="bg-transparent border-2 border-white text-white px-5 py-2 rounded-md hover:bg-white hover:text-purple-700 transition-all font-medium">
+                            <i class="fa-solid fa-download mr-2"></i>下载客户端
                         </a>
                     </div>
                 </div>
-                <div class="border border-gray-200 rounded-lg p-6 bg-gray-50 opacity-80">
-                    <div class="text-center mb-4">
-                        <i class="fa-solid fa-mobile-screen-button text-4xl text-gray-500"></i>
-                        <h3 class="text-lg font-bold mt-2">手机端客户端</h3>
-                    </div>
-                    <p class="text-gray-600 text-center mb-4">适配Android/iOS系统，暂未开放</p>
-                    <div class="text-center">
-                        <button class="bg-gray-400 text-white px-6 py-2 rounded-md cursor-not-allowed" disabled>
-                            <i class="fa-solid fa-lock mr-2"></i>暂未开放
-                        </button>
-                    </div>
+                <div class="md:w-1/3 flex justify-center">
+                    <i class="fa-solid fa-gamepad text-6xl md:text-8xl opacity-80"></i>
                 </div>
             </div>
-        </section>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- 加载指示器 -->
+            <div id="loading-indicator" class="p-8">
+                <div class="loading-spinner"></div>
+                <p class="text-center text-gray-600 mt-4">正在加载介绍内容...</p>
+            </div>
+            
+            <!-- 错误信息 -->
+            <div id="error-message" class="hidden"></div>
+            
+            <!-- Markdown 内容 -->
+            <div id="markdown-content" class="hidden markdown-content p-6 md:p-8"></div>
+        </div>
+        
+        <!-- 功能卡片 -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow-md p-6 hover-card mobile-text-center">
+                <div class="text-purple-600 text-3xl mb-4">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-3">实时状态监测</h3>
+                <p class="text-gray-600 mb-4">随时查看服务器在线状态、延迟、玩家列表等信息</p>
+                <a href="status.html" class="inline-block text-purple-600 font-medium hover:text-purple-800">
+                    查看状态 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6 hover-card mobile-text-center">
+                <div class="text-purple-600 text-3xl mb-4">
+                    <i class="fa-solid fa-download"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-3">一键下载客户端</h3>
+                <p class="text-gray-600 mb-4">获取专属客户端，享受最佳游戏体验</p>
+                <a href="download.html" class="inline-block text-purple-600 font-medium hover:text-purple-800">
+                    立即下载 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6 hover-card mobile-text-center">
+                <div class="text-purple-600 text-3xl mb-4">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-3">活跃玩家社区</h3>
+                <p class="text-gray-600 mb-4">加入我们的社区，与其他玩家交流分享</p>
+                <a href="status.html" class="inline-block text-purple-600 font-medium hover:text-purple-800">
+                    查看玩家列表 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
     </main>
 
-    <footer class="bg-gray-800 text-white py-4 px-6 mt-8 rounded-lg text-center">
-        <p>&copy; 2026 KMnO4 MC服务器 - 状态检测网站</p>
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6 px-6 mt-8">
+        <div class="container mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0 mobile-text-center">
+                    <h3 class="text-lg font-bold mb-2">KMnO4 MC服务器</h3>
+                    <p class="text-gray-300">一个充满创意与探索的Minecraft社区</p>
+                </div>
+                <div class="flex space-x-6 mobile-space-y-4">
+                    <a href="index.html" class="text-gray-300 hover:text-white transition-colors">主页</a>
+                    <a href="status.html" class="text-gray-300 hover:text-white transition-colors">服务器状态</a>
+                    <a href="download.html" class="text-gray-300 hover:text-white transition-colors">客户端下载</a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">
+                <p>&copy; 2026 KMnO4 MC服务器 - 版权所有</p>
+            </div>
+        </div>
     </footer>
 </body>
 </html>
