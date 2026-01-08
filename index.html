@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KMnO4 MC服务器 - 状态检测</title>
+    <!-- 网页图标 -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239333EA'%3E%3Cpath d='M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM4 5h4v4H4V5zm0 6h4v4H4v-4zm0 6h4v4H4v-4zm16 0h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V5h4v4z'/%3E%3C/svg%3E" type="image/svg+xml">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <style>
+        /* 刷新旋转动画 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        /* 状态卡片过渡动画 */
+        .status-card {
+            transition: all 0.5s ease;
+            display: block; /* 强制块级元素 */
+            width: 100%; /* 宽度100% */
+            margin-bottom: 1rem; /* 卡片间距 */
+        }
+        .status-loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        /* Motd样式：强制黑色 + 独立行 */
+        .motd-card {
+            min-height: 60px;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 0.5rem;
+        }
+        .motd-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 15px;
+            font-weight: 600;
+            color: #000000 !important;
+        }
+        /* 玩家列表样式：Motd下方独立完整行，和Motd同样式 */
+        .players-list-card {
+            min-height: 60px;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 0.5rem;
+            margin-top: 1rem !important; /* 强制和Motd拉开间距 */
+        }
+        .players-list-content {
+            line-height: 1.5;
+            font-size: 15px;
+            font-weight: 500;
+            color: #333333;
+        }
+        /* 基础状态卡片容器（4列） */
+        .basic-status-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .basic-status-card {
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 0.5rem;
+        }
+        /* 异常/正常状态样式 */
+        .text-error {
+            color: #dc2626 !important; /* 红色 */
+            font-weight: 600;
+        }
+        .text-success {
+            color: #16a34a !important;
+            font-weight: 600;
+        }
+        .text-info {
+            color: #2563eb !important;
+            font-weight: 500;
+        }
+    </style>
+    <script>
+        // ===================== 配置项（保持不变） =====================
+        const SERVER_LINES = [
+            { name: "主线路", ip: "nb.2.frp.one", port: 50120 },
+            { name: "备用线路1", ip: "sz.frp.one", port: 47942 },
+            { name: "备用线路2", ip: "cd.4.frp.one", port: 34769 }
+        ];
+        const REFRESH_INTERVAL = 30000; // 30秒自动刷新
+        const SERVER_MAIN_PROTOCOL = "Java"; // 主协议（MC分为Java/BE（基岩）协议）
+        const REQUEST_TIMEOUT = 8000;
+        const MC_STATUS_API = "https://api.mcstatus.io/v2/status/java/";
+        // ===================== 配置结束 =====================
+
+        let currentLineIndex = 0;
+        let refreshTimer = null;
+        let countdownTimer = null;
+        let remainingSeconds = 30;
+
+        // 核心修复：增强版本提取容错，避免不必要的1.0.x兜底，优先捕获实际版本
+        function parseServerProtocol(protocolData) {
+            // 步骤1：增强版本匹配，支持更多格式，提高有效版本捕获率
+            let mcCoreVersion = "1.20"; // 改为MC主流版本兜底，替代1.0（更贴合实际场景）
+            if (protocolData?.name) {
+                // 优化正则1：先匹配完整数字版本（1.12、1.12.2、1.21.10等，所有位数）
+                const fullVersionMatch = protocolData.name.match(/\d+\.\d+(\.\d+)*(\.\d+)*/);
+                if (fullVersionMatch) {
+                    // 提取「主版本.次版本」核心部分（无论后续有多少修订版本）
+                    const coreVersionMatch = fullVersionMatch[0].match(/\d+\.\d+/);
+                    if (coreVersionMatch) {
+                        mcCoreVersion = coreVersionMatch[0];
+                    }
+                }
+                // 补充：如果完整版本匹配失败，再尝试原有核心匹配，双重保障
+                else if (!fullVersionMatch) {
+                    const coreVersionFallback = protocolData.name.match(/\d+\.\d+/);
+                    if (coreVersionFallback) {
+                        mcCoreVersion = coreVersionFallback[0];
+                    }
+                }
+            }
+            // 统一格式化为「x.y.x」（如1.12→1.12.x、1.21→1.21.x、1.16→1.16.x）
+            const formattedMcVersion = `${mcCoreVersion}.x`;
+
+            // 步骤2：提取协议版本号（保持不变）
+            let protocolVersion = "通用协议";
+            if (protocolData?.protocol) {
+                protocolVersion = `协议版本${protocolData.protocol}`;
+            }
+
+            // 步骤3：拼接最终格式（保持不变）
+            return `${formattedMcVersion}(${protocolVersion})`;
+        }
+
+        // 解析Motd：保持不变
+        function parseServerMotd(motdRaw) {
+            if (!motdRaw) return "无描述信息";
+            let cleanMotd = "";
+            if (typeof motdRaw === 'string') {
+                cleanMotd = motdRaw.replace(/§[0-9a-fk-or]/gi, '').trim();
+            } else if (motdRaw.clean) {
+                cleanMotd = motdRaw.clean.trim();
+            } else if (motdRaw.raw) {
+                cleanMotd = motdRaw.raw.replace(/§[0-9a-fk-or]/gi, '').trim();
+            }
+            return cleanMotd || "无描述信息";
+        }
+
+        // 解析玩家列表：保持不变
+        function parsePlayersList(playersData) {
+            const onlineCount = playersData?.online || 0;
+            if (onlineCount === 0) {
+                return "<span class='text-info'>暂无在线玩家</span>";
+            }
+            if (!playersData?.list || !Array.isArray(playersData.list) || playersData.list.length === 0) {
+                return `<span class='text-info'>共 ${onlineCount} 名玩家在线（服务器隐藏了玩家列表）</span>`;
+            }
+            const playerNames = playersData.list.map((player, index) => 
+                `<div>${index + 1}. ${player.name || '未知玩家'}</div>`
+            ).join("");
+            return playerNames || "<span class='text-info'>暂无在线玩家</span>";
+        }
+
+        // 自定义延迟检测：保持不变
+        async function getRequestLatency(ip, port) {
+            const startTime = Date.now();
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+                const requestUrl = `${MC_STATUS_API}${ip}:${port}`;
+                
+                await fetch(requestUrl, {
+                    signal: controller.signal,
+                    cache: 'no-cache',
+                    method: 'GET'
+                });
+                clearTimeout(timeoutId);
+                return Date.now() - startTime;
+            } catch (error) {
+                return -1;
+            }
+        }
+
+        // 更新服务器地址：保持不变
+        function updateServerAddressDisplay(ip, port) {
+            document.getElementById('server-address').textContent = `${SERVER_MAIN_PROTOCOL} | ${ip}:${port}`;
+        }
+
+        // 更新倒计时：保持不变
+        function updateCountdownDisplay() {
+            document.getElementById('refresh-countdown').textContent = `自动刷新剩余：${remainingSeconds}秒`;
+        }
+
+        // 重置倒计时：保持不变
+        function resetCountdown() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            remainingSeconds = 30;
+            updateCountdownDisplay();
+            countdownTimer = setInterval(() => {
+                remainingSeconds--;
+                updateCountdownDisplay();
+                if (remainingSeconds < 0) remainingSeconds = 0;
+            }, 1000);
+        }
+
+        // ========== 核心检测逻辑（仅修复版本兜底，其他保持不变） ==========
+        async function forceFullCheck(serverIp, serverPort) {
+            const serverStatusEl = document.getElementById('server-status');
+            const serverPlayersEl = document.getElementById('server-players');
+            const serverLatencyEl = document.getElementById('server-latency');
+            const serverProtocolEl = document.getElementById('server-protocol');
+            const motdElement = document.getElementById('server-motd');
+            const playersListElement = document.getElementById('server-players-list');
+            
+            const allCards = document.querySelectorAll('.status-card, .basic-status-card');
+            
+            // 加载状态
+            serverStatusEl.innerHTML = '<i class="fa-solid fa-circle-notch loading-spinner text-blue-500"></i> 正在检测...';
+            serverPlayersEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
+            serverLatencyEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
+            serverProtocolEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
+            motdElement.textContent = '检测中...';
+            playersListElement.innerHTML = '<span style="color: #999;">检测中...</span>';
+            allCards.forEach(card => card.classList.add('status-loading'));
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+                const requestUrl = `${MC_STATUS_API}${serverIp}:${serverPort}`;
+                
+                const response = await fetch(requestUrl, {
+                    signal: controller.signal,
+                    cache: 'no-cache',
+                    method: 'GET'
+                });
+
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("=== API原始返回数据 ===", data);
+                    console.log("版本相关完整数据：", data.version);
+                    
+                    if (data.online === true) {
+                        // 服务器在线：修复后版本正常显示
+                        serverStatusEl.innerHTML = '<i class="fa-solid fa-circle text-success"></i> <span class="text-success">服务器在线</span>';
+                        const hasPlayers = data.players && typeof data.players.online === 'number' && typeof data.players.max === 'number';
+                        serverPlayersEl.textContent = hasPlayers ? `${data.players.online}/${data.players.max}` : '<span class="text-error">--/--</span>';
+                        let latency = data.latency || await getRequestLatency(serverIp, serverPort);
+                        serverLatencyEl.innerHTML = (latency > 0 && !isNaN(latency)) 
+                            ? `<span class="text-success">${latency} ms</span>` 
+                            : '<span class="text-error">获取失败</span>';
+                        // 修复后版本格式显示（避免1.0.x）
+                        const serverProtocol = parseServerProtocol(data.version || {});
+                        serverProtocolEl.innerHTML = `<span class="text-success">${serverProtocol}</span>`;
+                        motdElement.textContent = parseServerMotd(data.motd);
+                        playersListElement.innerHTML = parsePlayersList(data.players || {});
+
+                    } else {
+                        // 服务器离线：仍显示红色---
+                        serverStatusEl.innerHTML = '<i class="fa-solid fa-circle text-error"></i> <span class="text-error">服务器离线</span>';
+                        serverPlayersEl.innerHTML = '<span class="text-error">--/--</span>';
+                        serverLatencyEl.innerHTML = '<span class="text-error">---</span>';
+                        serverProtocolEl.innerHTML = '<span class="text-error">---</span>';
+                        motdElement.innerHTML = '<span class="text-error">--</span>';
+                        playersListElement.innerHTML = '<span class="text-error">--</span>';
+                    }
+                } else {
+                    throw new Error(`API返回错误：${response.status}`);
+                }
+            } catch (error) {
+                // 连接失败：仍显示红色---
+                console.log("检测失败:", error);
+                serverStatusEl.innerHTML = '<i class="fa-solid fa-circle text-error"></i> <span class="text-error">连接失败</span>';
+                serverPlayersEl.innerHTML = '<span class="text-error">--/--</span>';
+                serverLatencyEl.innerHTML = '<span class="text-error">获取失败</span>';
+                serverProtocolEl.innerHTML = '<span class="text-error">---</span>';
+                motdElement.innerHTML = '<span class="text-error">--</span>';
+                playersListElement.innerHTML = '<span class="text-error">--</span>';
+            } finally {
+                allCards.forEach(card => card.classList.remove('status-loading'));
+            }
+        }
+
+        // 统一刷新触发：保持不变
+        function triggerRefresh() {
+            const selectedServer = SERVER_LINES[currentLineIndex];
+            forceFullCheck(selectedServer.ip, selectedServer.port);
+            resetCountdown();
+        }
+
+        // 切换线路：保持不变
+        function switchServerLine(index) {
+            currentLineIndex = index;
+            document.querySelectorAll('.line-btn').forEach((btn, i) => {
+                btn.className = i === index 
+                    ? 'line-btn bg-purple-600 text-white px-4 py-2 rounded-md transition-all' 
+                    : 'line-btn bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition-all';
+            });
+            const selectedServer = SERVER_LINES[index];
+            updateServerAddressDisplay(selectedServer.ip, selectedServer.port);
+            triggerRefresh();
+            
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(triggerRefresh, REFRESH_INTERVAL);
+        }
+
+        // 页面初始化：保持不变
+        window.onload = function() {
+            const lineContainer = document.getElementById('server-lines');
+            SERVER_LINES.forEach((line, index) => {
+                const btn = document.createElement('button');
+                btn.className = index === 0 
+                    ? 'line-btn bg-purple-600 text-white px-4 py-2 rounded-md transition-all' 
+                    : 'line-btn bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md transition-all';
+                btn.textContent = line.name;
+                btn.onclick = () => switchServerLine(index);
+                lineContainer.appendChild(btn);
+            });
+
+            const defaultServer = SERVER_LINES[0];
+            updateServerAddressDisplay(defaultServer.ip, defaultServer.port);
+            
+            triggerRefresh();
+            refreshTimer = setInterval(triggerRefresh, REFRESH_INTERVAL);
+            resetCountdown();
+        };
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col p-4 md:p-8">
+    <header class="bg-purple-700 text-white py-4 px-6 rounded-lg shadow-md mb-6">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold"><i class="fa-solid fa-server mr-2"></i>KMnO4 MC服务器</h1>
+            <nav>
+                <a href="#status" class="text-white hover:text-purple-200 mx-2">服务器状态</a>
+                <a href="#download" class="text-white hover:text-purple-200 mx-2">客户端下载</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto">
+        <section id="status" class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">服务器状态检测</h2>
+            
+            <div class="mb-6 flex flex-wrap gap-3 items-center justify-between">
+                <div id="server-lines" class="flex gap-2"></div>
+                <div class="flex items-center gap-4">
+                    <span id="refresh-countdown" class="text-gray-600 text-sm">自动刷新剩余：30秒</span>
+                    <button onclick="triggerRefresh()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-arrows-rotate"></i> 手动刷新
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-6 p-3 bg-gray-100 rounded-md">
+                <p class="text-gray-600 text-sm mb-1">服务器地址</p>
+                <p id="server-address" class="text-lg font-bold text-purple-700">加载中...</p>
+            </div>
+
+            <div class="basic-status-container mb-6">
+                <div class="basic-status-card">
+                    <p class="text-gray-600 text-sm mb-1">服务器状态</p>
+                    <p id="server-status" class="text-lg font-bold">检测中...</p>
+                </div>
+                <div class="basic-status-card">
+                    <p class="text-gray-600 text-sm mb-1">在线人数</p>
+                    <p id="server-players" class="text-lg font-bold">---</p>
+                </div>
+                <div class="basic-status-card">
+                    <p class="text-gray-600 text-sm mb-1">延迟</p>
+                    <p id="server-latency" class="text-lg font-bold">---</p>
+                </div>
+                <div class="basic-status-card">
+                    <p class="text-gray-600 text-sm mb-1">服务器版本（协议）</p>
+                    <p id="server-protocol" class="text-lg font-bold">---</p>
+                </div>
+            </div>
+
+            <div class="status-card motd-card mb-0">
+                <p class="text-gray-600 text-sm mb-2">服务器Motd</p>
+                <div id="server-motd" class="motd-content">---</div>
+            </div>
+
+            <div class="status-card players-list-card">
+                <p class="text-gray-600 text-sm mb-2">在线玩家列表</p>
+                <div id="server-players-list" class="players-list-content">---</div>
+            </div>
+        </section>
+
+        <section id="download" class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">客户端下载</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all">
+                    <div class="text-center mb-4">
+                        <i class="fa-solid fa-desktop text-4xl text-purple-600"></i>
+                        <h3 class="text-lg font-bold mt-2">电脑端客户端</h3>
+                    </div>
+                    <p class="text-gray-600 text-center mb-4">适配Windows/macOS/Linux系统</p>
+                    <div class="text-center">
+                        <a href="download.html" class="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition-all">
+                            <i class="fa-solid fa-download mr-2"></i>立即下载
+                        </a>
+                    </div>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-6 bg-gray-50 opacity-80">
+                    <div class="text-center mb-4">
+                        <i class="fa-solid fa-mobile-screen-button text-4xl text-gray-500"></i>
+                        <h3 class="text-lg font-bold mt-2">手机端客户端</h3>
+                    </div>
+                    <p class="text-gray-600 text-center mb-4">适配Android/iOS系统，暂未开放</p>
+                    <div class="text-center">
+                        <button class="bg-gray-400 text-white px-6 py-2 rounded-md cursor-not-allowed" disabled>
+                            <i class="fa-solid fa-lock mr-2"></i>暂未开放
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-4 px-6 mt-8 rounded-lg text-center">
+        <p>&copy; 2026 KMnO4 MC服务器 - 状态检测网站</p>
+    </footer>
+</body>
+</html>
