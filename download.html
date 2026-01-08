@@ -2,65 +2,438 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>客户端下载 - KMnO4 MC服务器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239333EA'%3E%3Cpath d='M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM4 5h4v4H4V5zm0 6h4v4H4v-4zm0 6h4v4H4v-4zm16 0h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V5h4v4z'/%3E%3C/svg%3E" type="image/svg+xml">
+    <style>
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .mobile-stack {
+                flex-direction: column !important;
+            }
+            .mobile-text-center {
+                text-align: center !important;
+            }
+            .mobile-full-width {
+                width: 100% !important;
+            }
+            .mobile-mb-4 {
+                margin-bottom: 1rem !important;
+            }
+            .mobile-p-4 {
+                padding: 1rem !important;
+            }
+            .mobile-space-y-4 > * + * {
+                margin-top: 1rem !important;
+            }
+            .mobile-hide {
+                display: none !important;
+            }
+            .mobile-show {
+                display: block !important;
+            }
+        }
+        
+        /* 下载进度条 */
+        .download-progress {
+            width: 100%;
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .download-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #9333ea, #4f46e5);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        /* 文件大小检测状态 */
+        .size-loading {
+            opacity: 0.7;
+        }
+    </style>
     <script>
-        // ===================== 可配置项（修改这里即可） =====================
-        // 客户端下载链接（替换为你的文件实际地址，如网盘链接、服务器文件地址）
+        // 配置项
         const CLIENT_DOWNLOAD_URL = "KMnO4_Client.7z";
-        // 客户端文件大小（可选，用于显示）
-        const CLIENT_FILE_SIZE = "约500MB";
-        // ===================== 配置结束 =====================
+        const DEFAULT_FILE_SIZE = "约500MB";
+        
+        // 格式化文件大小为可读格式
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 检测文件大小
+        function detectFileSize() {
+            const fileSizeElement = document.getElementById('file-size');
+            const sizeBadge = document.querySelector('#file-size-badge');
+            
+            // 显示加载状态
+            fileSizeElement.textContent = '检测中...';
+            if (sizeBadge) {
+                sizeBadge.classList.add('size-loading');
+            }
+            
+            // 创建XMLHttpRequest
+            const xhr = new XMLHttpRequest();
+            xhr.open('HEAD', CLIENT_DOWNLOAD_URL, true);
+            xhr.timeout = 5000;
+            
+            xhr.onload = function() {
+                if (xhr.status === 200 || xhr.status === 0) {
+                    const contentLength = xhr.getResponseHeader('Content-Length');
+                    
+                    if (contentLength) {
+                        const fileSizeBytes = parseInt(contentLength, 10);
+                        const formattedSize = formatFileSize(fileSizeBytes);
+                        fileSizeElement.textContent = formattedSize;
+                        
+                        // 移除加载状态
+                        if (sizeBadge) {
+                            sizeBadge.classList.remove('size-loading');
+                        }
+                        
+                        // 添加成功样式
+                        fileSizeElement.classList.add('text-green-600');
+                        fileSizeElement.classList.remove('text-blue-800');
+                    } else {
+                        // 无法获取文件大小
+                        fileSizeElement.textContent = DEFAULT_FILE_SIZE;
+                        fileSizeElement.title = '无法获取精确大小，显示估计值';
+                        if (sizeBadge) {
+                            sizeBadge.classList.remove('size-loading');
+                        }
+                    }
+                } else {
+                    // 请求失败，使用默认值
+                    fallbackToDefault();
+                }
+            };
+            
+            xhr.onerror = function() {
+                fallbackToDefault();
+            };
+            
+            xhr.ontimeout = function() {
+                fallbackToDefault();
+            };
+            
+            xhr.send();
+            
+            function fallbackToDefault() {
+                fileSizeElement.textContent = DEFAULT_FILE_SIZE;
+                fileSizeElement.title = '使用默认大小（检测失败）';
+                if (sizeBadge) {
+                    sizeBadge.classList.remove('size-loading');
+                }
+            }
+        }
+        
+        // 模拟下载进度（仅用于演示）
+        function simulateDownloadProgress() {
+            const progressBar = document.getElementById('download-progress-bar');
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (progress < 95) {
+                    progress += Math.random() * 10;
+                    if (progress > 95) progress = 95;
+                    progressBar.style.width = progress + '%';
+                }
+            }, 200);
+            
+            return interval;
+        }
+        
+        // 处理下载
+        function handleDownload() {
+            const downloadBtn = document.getElementById('download-btn');
+            const progressContainer = document.getElementById('progress-container');
+            
+            // 显示进度条
+            downloadBtn.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            
+            // 模拟下载进度
+            const progressInterval = simulateDownloadProgress();
+            
+            // 模拟下载完成（实际中会直接下载文件）
+            setTimeout(() => {
+                clearInterval(progressInterval);
+                document.getElementById('download-progress-bar').style.width = '100%';
+                
+                // 显示下载完成消息
+                setTimeout(() => {
+                    progressContainer.innerHTML = `
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                            <i class="fa-solid fa-circle-check text-green-500 text-2xl mb-2"></i>
+                            <h4 class="font-bold text-green-700 mb-1">下载准备完成</h4>
+                            <p class="text-green-600 text-sm mb-3">客户端已准备好，开始下载...</p>
+                            <a href="${CLIENT_DOWNLOAD_URL}" download class="inline-block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-all text-sm">
+                                立即下载文件
+                            </a>
+                        </div>
+                    `;
+                }, 500);
+            }, 3000);
+        }
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 移动端菜单切换
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    const isHidden = mobileMenu.classList.contains('hidden');
+                    if (isHidden) {
+                        mobileMenu.classList.remove('hidden');
+                        mobileMenuBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
+                    } else {
+                        mobileMenu.classList.add('hidden');
+                        mobileMenuBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                    }
+                });
+            }
+            
+            // 点击菜单项后自动关闭移动端菜单
+            const mobileMenuLinks = document.querySelectorAll('#mobile-menu a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    mobileMenu.classList.add('hidden');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                    }
+                });
+            });
+            
+            // 检测文件大小
+            detectFileSize();
+        });
     </script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- 顶部导航栏 -->
     <header class="bg-purple-700 text-white py-4 px-6 shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold"><i class="fa-solid fa-server mr-2"></i>KMnO4 MC服务器</h1>
-            <nav>
-                <a href="index.html" class="text-white hover:text-purple-200 mx-2">返回首页</a>
+        <div class="container mxauto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center">
+                <i class="fa-solid fa-server mr-2"></i>
+                <span class="mobile-text-center">KMnO4 MC服务器</span>
+            </h1>
+            
+            <!-- 桌面端导航 -->
+            <nav class="hidden md:block">
+                <a href="index.html" class="text-white hover:text-purple-200 mx-2 font-medium">主页</a>
+                <a href="status.html" class="text-white hover:text-purple-200 mx-2 font-medium">服务器状态</a>
+                <a href="download.html" class="text-white hover:text-purple-200 mx-2 font-medium">客户端下载</a>
             </nav>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-btn" class="md:hidden text-white text-2xl">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端菜单 -->
+        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-2">
+            <div class="flex flex-col space-y-3">
+                <a href="index.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">主页</a>
+                <a href="status.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">服务器状态</a>
+                <a href="download.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">客户端下载</a>
+            </div>
         </div>
     </header>
 
     <!-- 主内容区 -->
-    <main class="flex-grow container mx-auto px-6 py-8">
-        <section class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
-            <h2 class="text-xl font-bold mb-6 text-gray-800 text-center border-b pb-2">电脑端客户端下载</h2>
+    <main class="flex-grow container mx-auto px-4 md:px-8 py-6 md:py-8">
+        <section class="bg-white rounded-xl shadow-md p-6 max-w-4xl mx-auto">
+            <h2 class="text-xl md:text-2xl font-bold mb-6 text-gray-800 text-center border-b pb-4">电脑端客户端下载</h2>
             
-            <div class="text-center mb-8">
-                <i class="fa-solid fa-file-zipper text-6xl text-purple-600 mb-4"></i>
-                <h3 class="text-lg font-bold">KMnO4_Client.7z</h3>
-                <p class="text-gray-600 mt-2">版本：1.20.1 | 大小：{{CLIENT_FILE_SIZE}}</p>
+            <div class="text-center mb-8 mobile-p-4">
+                <div class="inline-block bg-gradient-to-r from-purple-100 to-indigo-100 p-6 rounded-full mb-4">
+                    <i class="fa-solid fa-file-zipper text-4xl md:text-6xl text-purple-600"></i>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold mb-2">KMnO4_Client.7z</h3>
+                <p class="text-gray-600">
+                    <span class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium mr-2 mb-2">版本：1.20.1</span>
+                    <span id="file-size-badge" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        大小：<span id="file-size" class="font-bold">${DEFAULT_FILE_SIZE}</span>
+                    </span>
+                </p>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="fa-solid fa-circle-info mr-1"></i>
+                    <span id="size-info">正在检测实际文件大小...</span>
+                </p>
             </div>
 
-            <!-- 下载按钮 -->
-            <div class="text-center mb-6">
-                <a href="{{CLIENT_DOWNLOAD_URL}}" class="bg-purple-600 text-white px-8 py-3 rounded-md hover:bg-purple-700 transition-all text-lg">
-                    <i class="fa-solid fa-download mr-2"></i>点击下载客户端
-                </a>
+            <!-- 下载区域 -->
+            <div class="bg-gray-50 rounded-xl p-6 md:p-8 mb-8 mobile-p-4">
+                <div class="text-center mb-6">
+                    <h4 class="text-lg font-bold mb-4">下载客户端</h4>
+                    <p class="text-gray-600 mb-6">点击下方按钮开始下载专属客户端，享受最佳游戏体验</p>
+                    
+                    <!-- 下载按钮 -->
+                    <button id="download-btn" onclick="handleDownload()" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all text-lg font-medium shadow-lg w-full md:w-auto">
+                        <i class="fa-solid fa-download mr-2"></i>点击下载客户端
+                    </button>
+                    
+                    <!-- 下载进度（初始隐藏） -->
+                    <div id="progress-container" class="hidden mt-6">
+                        <p class="text-gray-600 mb-3">正在准备下载，请稍候...</p>
+                        <div class="download-progress">
+                            <div id="download-progress-bar" class="download-progress-bar" style="width: 0%"></div>
+                        </div>
+                        <p class="text-gray-500 text-sm mt-2">正在准备文件...</p>
+                    </div>
+                </div>
+                
+                <!-- 备用下载链接 -->
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                    <p class="text-gray-600 mb-3 text-sm">如果上方按钮无法下载，请使用备用链接：</p>
+                    <a href="${CLIENT_DOWNLOAD_URL}" download class="inline-block bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 transition-all text-sm">
+                        <i class="fa-solid fa-link mr-2"></i>直接下载链接
+                    </a>
+                </div>
             </div>
 
             <!-- 下载说明 -->
-            <div class="bg-gray-100 rounded-md p-4 mt-6">
-                <h4 class="font-bold mb-2"><i class="fa-solid fa-circle-info mr-2"></i>下载说明</h4>
-                <ul class="text-gray-600 list-disc list-inside space-y-2">
-                    <li>客户端为7z压缩包，需使用解压软件（如WinRAR、7-Zip）解压</li>
-                    <li>解压后直接运行启动器即可，无需额外安装</li>
-                    <li>若下载失败，请检查网络或更换浏览器重试</li>
-                    <li>客户端仅支持Windows/macOS/Linux系统，版本1.20.1</li>
-                </ul>
+            <div class="bg-purple-50 rounded-xl p-6 mobile-p-4">
+                <h4 class="font-bold mb-4 text-lg flex items-center">
+                    <i class="fa-solid fa-circle-info text-purple-600 mr-2"></i>下载与安装说明
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-purple-100 text-purple-800 p-2 rounded-md mr-3">
+                                <i class="fa-solid fa-1"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold mb-1">解压文件</h5>
+                                <p class="text-gray-600 text-sm">客户端为7z压缩包，需使用解压软件（如WinRAR、7-Zip）解压</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-purple-100 text-purple-800 p-2 rounded-md mr-3">
+                                <i class="fa-solid fa-2"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold mb-1">运行启动器</h5>
+                                <p class="text-gray-600 text-sm">解压后直接运行启动器即可，无需额外安装</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <div class="bg-purple-100 text-purple-800 p-2 rounded-md mr-3">
+                                <i class="fa-solid fa-3"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold mb-1">登录游戏</h5>
+                                <p class="text-gray-600 text-sm">使用您的正版Minecraft账号登录，或使用离线模式账号</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <div class="bg-purple-100 text-purple-800 p-2 rounded-md mr-3">
+                                <i class="fa-solid fa-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold mb-1">加入服务器</h5>
+                                <p class="text-gray-600 text-sm">在服务器列表中添加服务器地址，开始游戏！</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 玩家列表指引 -->
+            <div class="mt-8 bg-blue-50 rounded-xl p-6 border border-blue-200">
+                <h4 class="font-bold mb-4 text-lg flex items-center">
+                    <i class="fa-solid fa-users text-blue-600 mr-2"></i>查看在线玩家
+                </h4>
+                <p class="text-gray-600 mb-4">
+                    想要查看当前在线的玩家列表吗？我们的服务器状态页面提供了实时的在线玩家信息，包括玩家数量和具体玩家昵称。
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="status.html" class="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 transition-all font-medium">
+                        <i class="fa-solid fa-satellite-dish mr-2"></i>查看服务器状态
+                    </a>
+                    <a href="index.html" class="bg-gray-200 text-gray-800 px-5 py-2 rounded-md hover:bg-gray-300 transition-all font-medium">
+                        <i class="fa-solid fa-home mr-2"></i>返回主页
+                    </a>
+                </div>
+            </div>
+            
+            <!-- 系统要求 -->
+            <div class="mt-8">
+                <h4 class="font-bold mb-4 text-lg"><i class="fa-solid fa-computer mr-2"></i>系统要求</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-purple-100">
+                            <tr>
+                                <th class="py-3 px-4 text-left">组件</th>
+                                <th class="py-3 px-4 text-left">最低要求</th>
+                                <th class="py-3 px-4 text-left">推荐配置</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-200">
+                                <td class="py-3 px-4 font-medium">操作系统</td>
+                                <td class="py-3 px-4">Windows 7 / macOS 10.12 / Linux Ubuntu 18.04</td>
+                                <td class="py-3 px-4">Windows 10 / macOS 11 / Linux Ubuntu 20.04</td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="py-3 px-4 font-medium">处理器</td>
+                                <td class="py-3 px-4">Intel Core i3 或同等性能</td>
+                                <td class="py-3 px-4">Intel Core i5 或同等性能</td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="py-3 px-4 font-medium">内存</td>
+                                <td class="py-3 px-4">4 GB RAM</td>
+                                <td class="py-3 px-4">8 GB RAM</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 font-medium">显卡</td>
+                                <td class="py-3 px-4">支持OpenGL 3.2</td>
+                                <td class="py-3 px-4">独立显卡，2GB显存</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
     </main>
 
     <!-- 页脚 -->
-    <footer class="bg-gray-800 text-white py-4 px-6 mt-8">
-        <div class="container mx-auto text-center">
-            <p>&copy; 2026 KMnO4 MC服务器 - 客户端下载页面</p>
+    <footer class="bg-gray-800 text-white py-6 px-6 mt-8">
+        <div class="container mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0 mobile-text-center">
+                    <h3 class="text-lg font-bold mb-2">KMnO4 MC服务器</h3>
+                    <p class="text-gray-300">专属客户端下载</p>
+                </div>
+                <div class="flex space-x-6 mobile-space-y-4 mobile-stack">
+                    <a href="index.html" class="text-gray-300 hover:text-white transition-colors">主页</a>
+                    <a href="status.html" class="text-gray-300 hover:text-white transition-colors">服务器状态</a>
+                    <a href="download.html" class="text-gray-300 hover:text-white transition-colors">客户端下载</a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">
+                <p>&copy; 2026 KMnO4 MC服务器 - 客户端下载页面</p>
+                <p class="mt-1">客户端版本：1.20.1 | 自动检测文件大小 | 最后更新：2026年1月</p>
+            </div>
         </div>
     </footer>
 </body>
