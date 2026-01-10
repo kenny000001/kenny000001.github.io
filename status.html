@@ -47,6 +47,11 @@
                 padding: 0.5rem 0.75rem !important;
                 font-size: 0.875rem !important;
             }
+            
+            /* 移动端玩家列表优化 */
+            .players-grid {
+                grid-template-columns: 1fr !important;
+            }
         }
         
         /* 刷新旋转动画 */
@@ -128,6 +133,76 @@
             color: #2563eb !important;
             font-weight: 500;
         }
+        .text-warning {
+            color: #d97706 !important;
+            font-weight: 500;
+        }
+        
+        /* 玩家列表项样式 - 改进版 */
+        .player-item {
+            display: flex;
+            align-items: center;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .player-item:last-child {
+            border-bottom: none;
+        }
+        .player-index {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #9333ea, #4f46e5);
+            color: white;
+            border-radius: 50%;
+            margin-right: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .player-name {
+            color: #1f2937;
+            font-weight: 500;
+            flex-grow: 1;
+        }
+        .player-uuid {
+            font-size: 11px;
+            color: #6b7280;
+            background-color: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+        
+        /* 玩家网格布局 */
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+        
+        /* 延迟颜色指示 */
+        .latency-excellent { color: #16a34a !important; }
+        .latency-good { color: #22c55e !important; }
+        .latency-fair { color: #eab308 !important; }
+        .latency-poor { color: #f97316 !important; }
+        .latency-bad { color: #dc2626 !important; }
+        
+        /* 在线状态指示器 */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        .status-online { background-color: #16a34a; }
+        .status-offline { background-color: #dc2626; }
+        .status-connecting { background-color: #eab308; }
     </style>
     <script>
         // ===================== 配置项 =====================
@@ -195,19 +270,89 @@
             return cleanMotd || "无描述信息";
         }
 
-        // 解析玩家列表
+        // 修复玩家列表解析 - 直接使用API返回的玩家名称
         function parsePlayersList(playersData) {
+            console.log("玩家数据原始:", playersData);
+            
             const onlineCount = playersData?.online || 0;
+            const maxPlayers = playersData?.max || 0;
+            
             if (onlineCount === 0) {
-                return "<span class='text-info'>暂无在线玩家</span>";
+                return "<div class='text-center py-4'><span class='text-info'>暂无在线玩家</span></div>";
             }
-            if (!playersData?.list || !Array.isArray(playersData.list) || playersData.list.length === 0) {
-                return `<span class='text-info'>共 ${onlineCount} 名玩家在线（服务器隐藏了玩家列表）</span>`;
+            
+            // 检查玩家列表是否存在且是数组
+            if (!playersData?.list || !Array.isArray(playersData.list)) {
+                return `<div class='text-center py-4'><span class='text-info'>共 ${onlineCount}/${maxPlayers} 名玩家在线（服务器隐藏了玩家列表）</span></div>`;
             }
-            const playerNames = playersData.list.map((player, index) => 
-                `<div>${index + 1}. ${player.name || '未知玩家'}</div>`
-            ).join("");
-            return playerNames || "<span class='text-info'>暂无在线玩家</span>";
+            
+            // 检查玩家列表是否为空
+            if (playersData.list.length === 0) {
+                return `<div class='text-center py-4'><span class='text-info'>共 ${onlineCount}/${maxPlayers} 名玩家在线（玩家列表为空）</span></div>`;
+            }
+            
+            console.log("玩家列表:", playersData.list);
+            
+            // 直接使用API返回的玩家名称
+            const playerItemsHTML = playersData.list.map((player, index) => {
+                // 优先使用 name_clean 字段，然后是 name_raw，最后是其他可能的字段
+                let playerName = player.name_clean || player.name_raw || player.name || player.username || "未知玩家";
+                
+                // 清理颜色代码（如果还有的话）
+                playerName = playerName.replace(/§[0-9a-fk-or]/gi, '').trim();
+                
+                // 获取UUID用于显示
+                const playerUUID = player.uuid || player.id;
+                const shortUUID = playerUUID ? formatUUIDForDisplay(playerUUID) : null;
+                
+                return `
+                    <div class="player-item">
+                        <span class="player-index">${index + 1}</span>
+                        <span class="player-name">
+                            ${playerName}
+                        </span>
+                        ${shortUUID ? `<span class="player-uuid" title="UUID: ${playerUUID}">${shortUUID}</span>` : ''}
+                    </div>
+                `;
+            }).join("");
+            
+            // 添加上线人数统计
+            return `
+                <div class="mb-3 p-2 bg-white rounded-md border border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <span class="text-info font-medium">
+                            <i class="fa-solid fa-users mr-2"></i>
+                            当前在线：${onlineCount}/${maxPlayers} 名玩家
+                        </span>
+                        <span class="text-xs text-gray-500">
+                            ${playersData.list.length} 个玩家信息
+                        </span>
+                    </div>
+                </div>
+                <div class="players-grid">
+                    ${playerItemsHTML}
+                </div>
+            `;
+        }
+
+        // 格式化UUID用于显示
+        function formatUUIDForDisplay(uuid) {
+            if (!uuid) return '';
+            
+            // 清理UUID（移除破折号）
+            const cleanUUID = uuid.replace(/-/g, '');
+            
+            // 返回前6个字符
+            return `${cleanUUID.substring(0, 6)}...`;
+        }
+
+        // 获取延迟颜色类
+        function getLatencyColorClass(latency) {
+            if (latency < 50) return 'latency-excellent';
+            if (latency < 100) return 'latency-good';
+            if (latency < 200) return 'latency-fair';
+            if (latency < 500) return 'latency-poor';
+            return 'latency-bad';
         }
 
         // 自定义延迟检测
@@ -269,7 +414,7 @@
             serverLatencyEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
             serverProtocolEl.innerHTML = '<span class="text-gray-600">检测中...</span>';
             motdElement.textContent = '检测中...';
-            playersListElement.innerHTML = '<span style="color: #999;">检测中...</span>';
+            playersListElement.innerHTML = '<div class="text-center py-4"><span style="color: #999;">检测中...</span></div>';
             allCards.forEach(card => card.classList.add('status-loading'));
 
             try {
@@ -277,32 +422,72 @@
                 const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
                 const requestUrl = `${MC_STATUS_API}${serverIp}:${serverPort}`;
                 
+                console.log(`正在查询: ${requestUrl}`);
+                
                 const response = await fetch(requestUrl, {
                     signal: controller.signal,
                     cache: 'no-cache',
-                    method: 'GET'
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'KMnO4-MC-Status-Check/1.0'
+                    }
                 });
 
                 clearTimeout(timeoutId);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log("=== API原始返回数据 ===", data);
-                    console.log("版本相关完整数据：", data.version);
+                    console.log("API返回数据:", data);
+                    console.log("玩家数据详情:", data.players);
                     
                     if (data.online === true) {
                         // 服务器在线
                         serverStatusEl.innerHTML = '<i class="fa-solid fa-circle text-success"></i> <span class="text-success">服务器在线</span>';
+                        
+                        // 处理在线人数
                         const hasPlayers = data.players && typeof data.players.online === 'number' && typeof data.players.max === 'number';
-                        serverPlayersEl.textContent = hasPlayers ? `${data.players.online}/${data.players.max}` : '<span class="text-error">--/--</span>';
+                        if (hasPlayers) {
+                            const playerCount = data.players.online;
+                            const maxPlayers = data.players.max;
+                            
+                            // 根据在线人数设置颜色
+                            let playerColorClass = 'text-info';
+                            if (playerCount > 0) playerColorClass = 'text-success';
+                            if (playerCount > maxPlayers * 0.8) playerColorClass = 'text-warning';
+                            
+                            serverPlayersEl.innerHTML = `<span class="${playerColorClass} font-bold">${playerCount}/${maxPlayers}</span>`;
+                        } else {
+                            serverPlayersEl.innerHTML = '<span class="text-error">--/--</span>';
+                        }
+                        
+                        // 处理延迟
                         let latency = data.latency || await getRequestLatency(serverIp, serverPort);
-                        serverLatencyEl.innerHTML = (latency > 0 && !isNaN(latency)) 
-                            ? `<span class="text-success">${latency} ms</span>` 
-                            : '<span class="text-error">获取失败</span>';
-                        // 修复后版本格式显示
+                        if (latency > 0 && !isNaN(latency)) {
+                            const latencyColorClass = getLatencyColorClass(latency);
+                            let latencyText = `${latency} ms`;
+                            
+                            // 添加延迟状态说明
+                            let latencyStatus = '';
+                            if (latency < 50) latencyStatus = ' (优秀)';
+                            else if (latency < 100) latencyStatus = ' (良好)';
+                            else if (latency < 200) latencyStatus = ' (一般)';
+                            else if (latency < 500) latencyStatus = ' (较差)';
+                            else latencyStatus = ' (很差)';
+                            
+                            serverLatencyEl.innerHTML = `<span class="${latencyColorClass} font-bold">${latencyText}</span><span class="text-gray-600 text-sm">${latencyStatus}</span>`;
+                        } else {
+                            serverLatencyEl.innerHTML = '<span class="text-error">获取失败</span>';
+                        }
+                        
+                        // 处理版本信息
                         const serverProtocol = parseServerProtocol(data.version || {});
-                        serverProtocolEl.innerHTML = `<span class="text-success">${serverProtocol}</span>`;
+                        serverProtocolEl.innerHTML = `<span class="text-success font-bold">${serverProtocol}</span>`;
+                        
+                        // 处理Motd
                         motdElement.textContent = parseServerMotd(data.motd);
+                        
+                        // 处理玩家列表（直接使用API返回的玩家名称）
                         playersListElement.innerHTML = parsePlayersList(data.players || {});
 
                     } else {
@@ -311,8 +496,8 @@
                         serverPlayersEl.innerHTML = '<span class="text-error">--/--</span>';
                         serverLatencyEl.innerHTML = '<span class="text-error">---</span>';
                         serverProtocolEl.innerHTML = '<span class="text-error">---</span>';
-                        motdElement.innerHTML = '<span class="text-error">--</span>';
-                        playersListElement.innerHTML = '<span class="text-error">--</span>';
+                        motdElement.innerHTML = '<span class="text-error">服务器离线</span>';
+                        playersListElement.innerHTML = '<div class="text-center py-4"><span class="text-error">服务器离线，无法获取玩家列表</span></div>';
                     }
                 } else {
                     throw new Error(`API返回错误：${response.status}`);
@@ -324,8 +509,8 @@
                 serverPlayersEl.innerHTML = '<span class="text-error">--/--</span>';
                 serverLatencyEl.innerHTML = '<span class="text-error">获取失败</span>';
                 serverProtocolEl.innerHTML = '<span class="text-error">---</span>';
-                motdElement.innerHTML = '<span class="text-error">--</span>';
-                playersListElement.innerHTML = '<span class="text-error">--</span>';
+                motdElement.innerHTML = '<span class="text-error">连接失败</span>';
+                playersListElement.innerHTML = '<div class="text-center py-4"><span class="text-error">连接失败，无法获取玩家列表</span></div>';
             } finally {
                 allCards.forEach(card => card.classList.remove('status-loading'));
             }
@@ -482,7 +667,11 @@
 
             <div class="status-card players-list-card">
                 <p class="text-gray-600 text-sm mb-2">在线玩家列表</p>
-                <div id="server-players-list" class="players-list-content">---</div>
+                <div id="server-players-list" class="players-list-content">
+                    <div class="text-center py-4">
+                        <span style="color: #999;">等待检测...</span>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -496,10 +685,11 @@
                         <h3 class="text-lg font-bold mt-2">状态说明</h3>
                     </div>
                     <ul class="text-gray-600 text-left space-y-2 mb-4">
-                        <li><i class="fa-solid fa-circle text-success mr-2"></i><span class="font-medium">在线</span> - 服务器正常运行</li>
-                        <li><i class="fa-solid fa-circle text-error mr-2"></i><span class="font-medium">离线</span> - 服务器未运行</li>
-                        <li><i class="fa-solid fa-circle text-error mr-2"></i><span class="font-medium">连接失败</span> - 网络或API问题</li>
-                        <li><i class="fa-solid fa-signal text-success mr-2"></i><span class="font-medium">延迟</span> - 小于100ms为优秀</li>
+                        <li><span class="status-indicator status-online"></span><span class="font-medium">在线</span> - 服务器正常运行</li>
+                        <li><span class="status-indicator status-offline"></span><span class="font-medium">离线</span> - 服务器未运行</li>
+                        <li><span class="status-indicator status-connecting"></span><span class="font-medium">连接失败</span> - 网络或API问题</li>
+                        <li><i class="fa-solid fa-signal text-success mr-2"></i><span class="font-medium">延迟</span> - &lt;50ms优秀，&lt;100ms良好</li>
+                        <li><i class="fa-solid fa-users text-info mr-2"></i><span class="font-medium">玩家列表</span> - 可能被服务器隐藏</li>
                     </ul>
                 </div>
                 <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all">
