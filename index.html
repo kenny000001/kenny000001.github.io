@@ -407,7 +407,7 @@
                         line.startsWith('<table') || 
                         line.startsWith('<blockquote') || 
                         line.startsWith('<pre>') || 
-                        line.startsWith('<hr>') ||
+                        line.startsWith('<hr>') || 
                         line.startsWith('<img')) {
                         
                         if (currentParagraph.length > 0) {
@@ -668,6 +668,7 @@ A: 下载的客户端为7z压缩包，解压后直接运行启动器即可。
                 <a href="index.html" class="text-white hover:text-purple-200 mx-2 font-medium">主页</a>
                 <a href="status.html" class="text-white hover:text-purple-200 mx-2 font-medium">服务器状态</a>
                 <a href="download.html" class="text-white hover:text-purple-200 mx-2 font-medium">客户端下载</a>
+                <a href="account_status.html" class="text-white hover:text-purple-200 mx-2 font-medium">账户状态</a>
             </nav>
             
             <!-- 移动端菜单按钮 -->
@@ -682,6 +683,7 @@ A: 下载的客户端为7z压缩包，解压后直接运行启动器即可。
                 <a href="index.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">主页</a>
                 <a href="status.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">服务器状态</a>
                 <a href="download.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">客户端下载</a>
+                <a href="account_status.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">账户状态</a>
             </div>
         </div>
     </header>
@@ -700,6 +702,9 @@ A: 下载的客户端为7z压缩包，解压后直接运行启动器即可。
                         </a>
                         <a href="download.html" class="bg-transparent border-2 border-white text-white px-5 py-2 rounded-md hover:bg-white hover:text-purple-700 transition-all font-medium">
                             <i class="fa-solid fa-download mr-2"></i>下载客户端
+                        </a>
+                        <a href="account_status.html" class="bg-transparent border-2 border-white text-white px-5 py-2 rounded-md hover:bg-white hover:text-purple-700 transition-all font-medium">
+                            <i class="fa-solid fa-user-check mr-2"></i>账户状态
                         </a>
                     </div>
                 </div>
@@ -725,7 +730,7 @@ A: 下载的客户端为7z压缩包，解压后直接运行启动器即可。
         </div>
         
         <!-- 功能卡片 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="bg-white rounded-xl shadow-md p-6 hover-card mobile-text-center">
                 <div class="text-purple-600 text-3xl mb-4">
                     <i class="fa-solid fa-satellite-dish"></i>
@@ -745,6 +750,17 @@ A: 下载的客户端为7z压缩包，解压后直接运行启动器即可。
                 <p class="text-gray-600 mb-4">获取专属客户端，享受最佳游戏体验</p>
                 <a href="download.html" class="inline-block text-purple-600 font-medium hover:text-purple-800">
                     立即下载 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-6 hover-card mobile-text-center">
+                <div class="text-purple-600 text-3xl mb-4">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <h3 class="text-lg font-bold mb-3">账户状态管理</h3>
+                <p class="text-gray-600 mb-4">绑定QQ号，管理游戏账户，查看账户信息</p>
+                <a href="account_status.html" class="inline-block text-purple-600 font-medium hover:text-purple-800">
+                    管理账户 <i class="fa-solid fa-arrow-right ml-1"></i>
                 </a>
             </div>
             
@@ -773,6 +789,7 @@ A: 下载的客户端为7z压缩包，解压后直接运行启动器即可。
                     <a href="index.html" class="text-gray-300 hover:text-white transition-colors">主页</a>
                     <a href="status.html" class="text-gray-300 hover:text-white transition-colors">服务器状态</a>
                     <a href="download.html" class="text-gray-300 hover:text-white transition-colors">客户端下载</a>
+                    <a href="account_status.html" class="text-gray-300 hover:text-white transition-colors">账户状态</a>
                 </div>
             </div>
             <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">

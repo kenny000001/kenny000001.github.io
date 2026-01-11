@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>账户状态 - KMnO4 MC服务器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239333EA'%3E%3Cpath d='M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM4 5h4v4H4V5zm0 6h4v4H4v-4zm0 6h4v4H4v-4zm16 0h-4v-4h4v4zm0-6h-4v-4h4v4zm0-6h-4V5h4v4z'/%3E%3C/svg%3E" type="image/svg+xml">
+    <style>
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .mobile-stack {
+                flex-direction: column !important;
+            }
+            .mobile-text-center {
+                text-align: center !important;
+            }
+            .mobile-full-width {
+                width: 100% !important;
+            }
+            .mobile-mb-2 {
+                margin-bottom: 0.5rem !important;
+            }
+            .mobile-p-4 {
+                padding: 1rem !important;
+            }
+            .mobile-space-y-4 > * + * {
+                margin-top: 1rem !important;
+            }
+            .mobile-hide {
+                display: none !important;
+            }
+            .mobile-show {
+                display: block !important;
+            }
+        }
+        
+        /* 表单动画 */
+        .form-transition {
+            transition: all 0.3s ease;
+        }
+        
+        /* 安全等级指示器 */
+        .security-level {
+            height: 8px;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .security-weak { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .security-medium { background: linear-gradient(90deg, #f59e0b, #eab308); }
+        .security-strong { background: linear-gradient(90deg, #22c55e, #16a34a); }
+        
+        /* 加载动画 */
+        .loading-spinner {
+            border: 4px solid rgba(147, 51, 234, 0.1);
+            border-left: 4px solid #9333ea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 模态框背景 */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            display: none;
+        }
+        
+        /* 输入框验证状态 */
+        .input-valid {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+        .input-invalid {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+    </style>
+    <script src="web_config.js"></script>
+    <script>
+        // 密码强度检查
+        function checkPasswordStrength(password) {
+            let score = 0;
+            if (password.length >= 8) score++;
+            if (/[A-Z]/.test(password)) score++;
+            if (/[a-z]/.test(password)) score++;
+            if (/[0-9]/.test(password)) score++;
+            if (/[^A-Za-z0-9]/.test(password)) score++;
+            
+            return {
+                score: score,
+                level: score <= 2 ? 'weak' : score <= 4 ? 'medium' : 'strong',
+                message: score <= 2 ? '密码较弱' : score <= 4 ? '密码中等' : '密码强'
+            };
+        }
+        
+        // 显示表单
+        function showForm(formName) {
+            // 隐藏所有表单
+            document.querySelectorAll('.form-container').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // 显示目标表单
+            document.getElementById(formName + '-form').classList.remove('hidden');
+            
+            // 更新按钮状态
+            document.querySelectorAll('.form-nav-btn').forEach(btn => {
+                if (btn.dataset.form === formName) {
+                    btn.classList.add('bg-purple-600', 'text-white');
+                    btn.classList.remove('bg-gray-200', 'text-gray-700');
+                } else {
+                    btn.classList.remove('bg-purple-600', 'text-white');
+                    btn.classList.add('bg-gray-200', 'text-gray-700');
+                }
+            });
+            
+            // 清空消息
+            hideMessage();
+        }
+        
+        // 显示消息
+        function showMessage(message, type = 'info') {
+            const messageEl = document.getElementById('message-box');
+            const iconMap = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-exclamation',
+                warning: 'fa-triangle-exclamation',
+                info: 'fa-circle-info'
+            };
+            const colorMap = {
+                success: 'bg-green-50 border-green-200 text-green-800',
+                error: 'bg-red-50 border-red-200 text-red-800',
+                warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                info: 'bg-blue-50 border-blue-200 text-blue-800'
+            };
+            
+            messageEl.innerHTML = `
+                <div class="${colorMap[type]} border rounded-lg p-4 flex items-start">
+                    <i class="fa-solid ${iconMap[type]} mt-0.5 mr-3"></i>
+                    <div class="flex-1">${message}</div>
+                    <button onclick="hideMessage()" class="ml-4 text-gray-500 hover:text-gray-700">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            `;
+            messageEl.classList.remove('hidden');
+        }
+        
+        // 隐藏消息
+        function hideMessage() {
+            document.getElementById('message-box').classList.add('hidden');
+        }
+        
+        // 验证QQ号格式
+        function validateQQ(qq) {
+            const qqRegex = /^[1-9][0-9]{4,11}$/;
+            return qqRegex.test(qq);
+        }
+        
+        // 验证邮箱格式
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        // 实时密码强度显示
+        function updatePasswordStrength() {
+            const password = document.getElementById('register-password').value;
+            const strength = checkPasswordStrength(password);
+            const indicator = document.getElementById('password-strength');
+            const text = document.getElementById('password-strength-text');
+            
+            indicator.className = `security-level security-${strength.level}`;
+            indicator.style.width = `${strength.score * 20}%`;
+            
+            text.textContent = strength.message;
+            text.className = `text-sm font-medium ${strength.level === 'weak' ? 'text-red-600' : strength.level === 'medium' ? 'text-yellow-600' : 'text-green-600'}`;
+        }
+        
+        // 处理登录
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const qq = document.getElementById('login-qq').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!validateQQ(qq)) {
+                showMessage('请输入有效的QQ号', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>登录中...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/login.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        qq: qq,
+                        password: password,
+                        token: generateCSRFToken()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('登录成功！正在跳转...', 'success');
+                    
+                    // 保存登录状态
+                    localStorage.setItem('loggedIn', 'true');
+                    localStorage.setItem('qq', qq);
+                    
+                    // 3秒后跳转到账户信息页
+                    setTimeout(() => {
+                        showAccountInfo(qq, data.data);
+                    }, 3000);
+                } else {
+                    showMessage(data.message || '登录失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请检查连接', 'error');
+            } finally {
+                // 恢复按钮状态
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // 处理注册
+        async function handleRegister(event) {
+            event.preventDefault();
+            
+            const qq = document.getElementById('register-qq').value;
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-password-confirm').value;
+            const email = document.getElementById('register-email').value;
+            const securityQuestion = document.getElementById('security-question').value;
+            const securityAnswer = document.getElementById('security-answer').value;
+            
+            // 验证输入
+            if (!validateQQ(qq)) {
+                showMessage('请输入有效的QQ号', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showMessage('两次输入的密码不一致', 'error');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showMessage('密码长度至少8位', 'error');
+                return;
+            }
+            
+            if (email && !validateEmail(email)) {
+                showMessage('请输入有效的邮箱地址', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>注册中...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/register.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        qq: qq,
+                        password: password,
+                        email: email,
+                        security_question: securityQuestion,
+                        security_answer: securityAnswer,
+                        token: generateCSRFToken()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('注册成功！请使用新密码登录', 'success');
+                    
+                    // 3秒后切换到登录表单
+                    setTimeout(() => {
+                        showForm('login');
+                    }, 3000);
+                } else {
+                    showMessage(data.message || '注册失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请检查连接', 'error');
+            } finally {
+                // 恢复按钮状态
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // 处理忘记密码
+        async function handleForgotPassword(event) {
+            event.preventDefault();
+            
+            const qq = document.getElementById('forgot-qq').value;
+            const email = document.getElementById('forgot-email').value;
+            
+            if (!validateQQ(qq)) {
+                showMessage('请输入有效的QQ号', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>发送中...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/reset.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        qq: qq,
+                        email: email,
+                        action: 'request_reset',
+                        token: generateCSRFToken()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('重置请求已发送，请检查QQ或邮箱', 'success');
+                    
+                    // 显示重置表单
+                    setTimeout(() => {
+                        showForm('reset');
+                        if (data.data && data.data.token) {
+                            document.getElementById('reset-token').value = data.data.token;
+                        }
+                    }, 2000);
+                } else {
+                    showMessage(data.message || '重置请求失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请检查连接', 'error');
+            } finally {
+                // 恢复按钮状态
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // 处理密码重置
+        async function handleResetPassword(event) {
+            event.preventDefault();
+            
+            const token = document.getElementById('reset-token').value;
+            const newPassword = document.getElementById('reset-password').value;
+            const confirmPassword = document.getElementById('reset-password-confirm').value;
+            
+            if (newPassword !== confirmPassword) {
+                showMessage('两次输入的密码不一致', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showMessage('密码长度至少8位', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>重置中...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/reset.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        new_password: newPassword,
+                        action: 'reset_password',
+                        token: generateCSRFToken()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('密码重置成功！请使用新密码登录', 'success');
+                    
+                    // 3秒后切换到登录表单
+                    setTimeout(() => {
+                        showForm('login');
+                    }, 3000);
+                } else {
+                    showMessage(data.message || '密码重置失败', 'error');
+                }
+            } catch (error) {
+                showMessage('网络错误，请检查连接', 'error');
+            } finally {
+                // 恢复按钮状态
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // 显示账户信息
+        function showAccountInfo(qq, accountData) {
+            // 隐藏所有表单
+            document.querySelectorAll('.form-container').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // 显示账户信息
+            document.getElementById('account-info').classList.remove('hidden');
+            
+            // 填充账户信息
+            document.getElementById('account-qq').textContent = qq;
+            document.getElementById('account-name').textContent = accountData.name || '未获取';
+            document.getElementById('account-created').textContent = accountData.created_at || '未获取';
+            document.getElementById('account-last-login').textContent = accountData.last_login_at || '从未登录';
+            
+            // 显示安全状态
+            const securityStatus = document.getElementById('account-security');
+            if (accountData.email) {
+                securityStatus.innerHTML = '<span class="text-green-600"><i class="fas fa-shield-check mr-1"></i> 账户安全</span>';
+            } else {
+                securityStatus.innerHTML = '<span class="text-yellow-600"><i class="fas fa-shield-exclamation mr-1"></i> 建议绑定邮箱</span>';
+            }
+        }
+        
+        // 登出
+        function handleLogout() {
+            localStorage.removeItem('loggedIn');
+            localStorage.removeItem('qq');
+            showForm('login');
+            showMessage('已成功登出', 'success');
+        }
+        
+        // 生成CSRF令牌（简化版）
+        function generateCSRFToken() {
+            return btoa(Date.now() + Math.random().toString(36).substr(2));
+        }
+        
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否已登录
+            const isLoggedIn = localStorage.getItem('loggedIn');
+            const savedQQ = localStorage.getItem('qq');
+            
+            if (isLoggedIn && savedQQ) {
+                // 自动加载账户信息
+                showAccountInfo(savedQQ, {});
+            } else {
+                showForm('login');
+            }
+            
+            // 移动端菜单处理
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    const isHidden = mobileMenu.classList.contains('hidden');
+                    if (isHidden) {
+                        mobileMenu.classList.remove('hidden');
+                        mobileMenuBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    } else {
+                        mobileMenu.classList.add('hidden');
+                        mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+                    }
+                });
+            }
+            
+            // 点击菜单项后自动关闭移动端菜单
+            const mobileMenuLinks = document.querySelectorAll('#mobile-menu a');
+            mobileMenuLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+                });
+            });
+        });
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-purple-700 text-white py-4 px-6 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center">
+                <i class="fas fa-server mr-2"></i>
+                <span class="mobile-text-center">KMnO4 MC服务器</span>
+            </h1>
+            
+            <!-- 桌面端导航 -->
+            <nav class="hidden md:block">
+                <a href="index.html" class="text-white hover:text-purple-200 mx-2 font-medium">主页</a>
+                <a href="status.html" class="text-white hover:text-purple-200 mx-2 font-medium">服务器状态</a>
+                <a href="download.html" class="text-white hover:text-purple-200 mx-2 font-medium">客户端下载</a>
+                <a href="account_status.html" class="text-white hover:text-purple-200 mx-2 font-medium">账户状态</a>
+            </nav>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-btn" class="md:hidden text-white text-2xl">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端菜单 -->
+        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-2">
+            <div class="flex flex-col space-y-3">
+                <a href="index.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">主页</a>
+                <a href="status.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">服务器状态</a>
+                <a href="download.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">客户端下载</a>
+                <a href="account_status.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">账户状态</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 md:px-8 py-6 md:py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- 页面标题 -->
+            <div class="mb-8 text-center">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">账户状态管理系统</h1>
+                <p class="text-gray-600">绑定你的QQ号与游戏账户，享受更好的服务器体验</p>
+            </div>
+            
+            <!-- 消息显示区 -->
+            <div id="message-box" class="mb-6 hidden"></div>
+            
+            <!-- 表单导航 -->
+            <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <button data-form="login" onclick="showForm('login')" class="form-nav-btn bg-purple-600 text-white px-4 py-2 rounded-md transition-all">
+                        <i class="fas fa-right-to-bracket mr-2"></i>登录
+                    </button>
+                    <button data-form="register" onclick="showForm('register')" class="form-nav-btn bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md transition-all">
+                        <i class="fas fa-user-plus mr-2"></i>注册绑定
+                    </button>
+                    <button data-form="forgot" onclick="showForm('forgot')" class="form-nav-btn bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md transition-all">
+                        <i class="fas fa-key mr-2"></i>忘记密码
+                    </button>
+                    <button data-form="reset" onclick="showForm('reset')" class="form-nav-btn bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md transition-all">
+                        <i class="fas fa-rotate mr-2"></i>重置密码
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 表单容器 -->
+            <div class="bg-white rounded-xl shadow-md p-6 md:p-8">
+                <!-- 登录表单 -->
+                <div id="login-form" class="form-container">
+                    <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">账户登录</h2>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="login-qq" class="block text-gray-700 text-sm font-bold mb-2">QQ号</label>
+                                <input type="text" id="login-qq" name="qq" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="请输入你的QQ号">
+                            </div>
+                            <div>
+                                <label for="login-password" class="block text-gray-700 text-sm font-bold mb-2">密码</label>
+                                <input type="password" id="login-password" name="password" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="请输入密码">
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="remember-me" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label for="remember-me" class="ml-2 block text-sm text-gray-700">记住我</label>
+                                </div>
+                                <a href="#" onclick="showForm('forgot')" class="text-sm text-purple-600 hover:text-purple-800">忘记密码？</a>
+                            </div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all font-medium">
+                                <i class="fas fa-right-to-bracket mr-2"></i>登录账户
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 注册绑定表单 -->
+                <div id="register-form" class="form-container hidden">
+                    <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">注册绑定账户</h2>
+                    <form onsubmit="handleRegister(event)">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="register-qq" class="block text-gray-700 text-sm font-bold mb-2">QQ号</label>
+                                <input type="text" id="register-qq" name="qq" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="请输入你的QQ号（需已在游戏中绑定）">
+                                <p class="text-sm text-gray-500 mt-1">请确保该QQ号已在MC服务器中通过机器人绑定</p>
+                            </div>
+                            <div>
+                                <label for="register-email" class="block text-gray-700 text-sm font-bold mb-2">邮箱（可选）</label>
+                                <input type="email" id="register-email" name="email"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="用于密码重置和通知">
+                            </div>
+                            <div>
+                                <label for="register-password" class="block text-gray-700 text-sm font-bold mb-2">设置密码</label>
+                                <input type="password" id="register-password" name="password" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="至少8位，包含字母和数字" oninput="updatePasswordStrength()">
+                                <!-- 密码强度指示器 -->
+                                <div class="mt-2">
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-sm text-gray-600">密码强度</span>
+                                        <span id="password-strength-text" class="text-sm font-medium">未设置</span>
+                                    </div>
+                                    <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div id="password-strength" class="security-level h-full" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="register-password-confirm" class="block text-gray-700 text-sm font-bold mb-2">确认密码</label>
+                                <input type="password" id="register-password-confirm" name="password_confirm" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="再次输入密码">
+                            </div>
+                            <div>
+                                <label for="security-question" class="block text-gray-700 text-sm font-bold mb-2">安全问题（可选）</label>
+                                <select id="security-question" name="security_question" 
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    <option value="">请选择安全问题</option>
+                                    <option value="你出生城市是？">你出生城市是？</option>
+                                    <option value="你母亲的名字是？">你母亲的名字是？</option>
+                                    <option value="你第一所学校的名字是？">你第一所学校的名字是？</option>
+                                    <option value="你最喜欢的宠物名字是？">你最喜欢的宠物名字是？</option>
+                                    <option value="你的座右铭是？">你的座右铭是？</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="security-answer" class="block text-gray-700 text-sm font-bold mb-2">安全答案</label>
+                                <input type="text" id="security-answer" name="security_answer"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="回答上面选择的问题">
+                            </div>
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <h3 class="font-bold text-yellow-800 mb-2"><i class="fas fa-triangle-exclamation mr-2"></i>重要提示</h3>
+                                <ul class="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                                    <li>请确保QQ号已在MC服务器中绑定（通过QQ机器人）</li>
+                                    <li>请妥善保管密码，不要泄露给他人</li>
+                                    <li>绑定邮箱和安全问题有助于密码找回</li>
+                                    <li>首次登录可能需要验证QQ号</li>
+                                </ul>
+                            </div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium">
+                                <i class="fas fa-user-check mr-2"></i>注册并绑定账户
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 忘记密码表单 -->
+                <div id="forgot-form" class="form-container hidden">
+                    <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">找回密码</h2>
+                    <form onsubmit="handleForgotPassword(event)">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="forgot-qq" class="block text-gray-700 text-sm font-bold mb-2">QQ号</label>
+                                <input type="text" id="forgot-qq" name="qq" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="请输入你的QQ号">
+                            </div>
+                            <div>
+                                <label for="forgot-email" class="block text-gray-700 text-sm font-bold mb-2">注册邮箱</label>
+                                <input type="email" id="forgot-email" name="email"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="请输入注册时填写的邮箱">
+                                <p class="text-sm text-gray-500 mt-1">如果忘记邮箱，请通过QQ机器人联系管理员</p>
+                            </div>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h3 class="font-bold text-blue-800 mb-2"><i class="fas fa-circle-info mr-2"></i>密码找回流程</h3>
+                                <ol class="text-sm text-blue-700 list-decimal list-inside space-y-1">
+                                    <li>输入QQ号和注册邮箱</li>
+                                    <li>系统会发送重置令牌到QQ或邮箱</li>
+                                    <li>使用令牌重置密码</li>
+                                    <li>如果无法收到令牌，请联系QQ机器人</li>
+                                </ol>
+                            </div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all font-medium">
+                                <i class="fas fa-paper-plane mr-2"></i>发送重置请求
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 重置密码表单 -->
+                <div id="reset-form" class="form-container hidden">
+                    <h2 class="text-xl font-bold mb-6 text-gray-800 border-b pb-2">重置密码</h2>
+                    <form onsubmit="handleResetPassword(event)">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="reset-token" class="block text-gray-700 text-sm font-bold mb-2">重置令牌</label>
+                                <input type="text" id="reset-token" name="token" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="请输入收到的重置令牌">
+                                <p class="text-sm text-gray-500 mt-1">令牌已发送到你的QQ或邮箱，1小时内有效</p>
+                            </div>
+                            <div>
+                                <label for="reset-password" class="block text-gray-700 text-sm font-bold mb-2">新密码</label>
+                                <input type="password" id="reset-password" name="new_password" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="请输入新密码" oninput="updatePasswordStrength()">
+                            </div>
+                            <div>
+                                <label for="reset-password-confirm" class="block text-gray-700 text-sm font-bold mb-2">确认新密码</label>
+                                <input type="password" id="reset-password-confirm" name="new_password_confirm" required 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                       placeholder="再次输入新密码">
+                            </div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-orange-600 to-amber-600 text-white py-3 px-4 rounded-lg hover:from-orange-700 hover:to-amber-700 transition-all font-medium">
+                                <i class="fas fa-rotate mr-2"></i>重置密码
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 账户信息 -->
+                <div id="account-info" class="form-container hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800">账户信息</h2>
+                        <button onclick="handleLogout()" class="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-all font-medium">
+                            <i class="fas fa-right-from-bracket mr-2"></i>登出
+                        </button>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="font-bold text-gray-700 mb-4 flex items-center">
+                                    <i class="fas fa-id-card mr-2 text-purple-600"></i>基本信息
+                                </h3>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between border-b pb-2">
+                                        <span class="text-gray-600">QQ号：</span>
+                                        <span id="account-qq" class="font-bold text-purple-700">加载中...</span>
+                                    </div>
+                                    <div class="flex justify-between border-b pb-2">
+                                        <span class="text-gray-600">游戏名称：</span>
+                                        <span id="account-name" class="font-bold text-gray-800">加载中...</span>
+                                    </div>
+                                    <div class="flex justify-between border-b pb-2">
+                                        <span class="text-gray-600">账户状态：</span>
+                                        <span id="account-security" class="font-bold">加载中...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-700 mb-4 flex items-center">
+                                    <i class="fas fa-history mr-2 text-blue-600"></i>时间信息
+                                </h3>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between border-b pb-2">
+                                        <span class="text-gray-600">创建时间：</span>
+                                        <span id="account-created" class="font-bold text-gray-800">加载中...</span>
+                                    </div>
+                                    <div class="flex justify-between border-b pb-2">
+                                        <span class="text-gray-600">最后登录：</span>
+                                        <span id="account-last-login" class="font-bold text-gray-800">加载中...</span>
+                                    </div>
+                                    <div class="flex justify-between border-b pb-2">
+                                        <span class="text-gray-600">最后活动：</span>
+                                        <span class="font-bold text-gray-800">刚刚</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-purple-50 rounded-xl p-6">
+                        <h3 class="font-bold text-gray-700 mb-4 flex items-center">
+                            <i class="fas fa-shield-halved mr-2 text-green-600"></i>账户安全
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-medium text-gray-700 mb-2">安全建议</h4>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li><i class="fas fa-check-circle text-green-500 mr-2"></i>定期更换密码，确保账户安全</li>
+                                    <li><i class="fas fa-check-circle text-green-500 mr-2"></i>绑定邮箱以便密码找回</li>
+                                    <li><i class="fas fa-check-circle text-green-500 mr-2"></i>不要将密码告诉他人</li>
+                                    <li><i class="fas fa-check-circle text-green-500 mr-2"></i>启用双重验证（即将推出）</li>
+                                </ul>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <button onclick="showForm('reset')" class="bg-white border border-purple-600 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-50 transition-all">
+                                    <i class="fas fa-key mr-2"></i>修改密码
+                                </button>
+                                <button onclick="showForm('register')" class="bg-white border border-blue-600 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-50 transition-all">
+                                    <i class="fas fa-envelope mr-2"></i>绑定邮箱
+                                </button>
+                                <a href="status.html" class="bg-white border border-green-600 text-green-700 px-4 py-2 rounded-lg hover:bg-green-50 transition-all inline-block">
+                                    <i class="fas fa-satellite-dish mr-2"></i>查看服务器状态
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 安全提示 -->
+            <div class="mt-8 bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <h3 class="font-bold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-triangle-exclamation text-yellow-600 mr-2"></i>安全提示
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">账户安全</h4>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li><i class="fas fa-lock mr-2"></i>所有密码均经过加密存储，即使是管理员也无法查看</li>
+                            <li><i class="fas fa-shield mr-2"></i>系统采用HTTPS加密传输，防止数据泄露</li>
+                            <li><i class="fas fa-user-shield mr-2"></i>多重验证机制保护账户安全</li>
+                            <li><i class="fas fa-clock mr-2"></i>会话自动过期，避免长期未操作的风险</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-700 mb-2">联系支持</h4>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li><i class="fab fa-qq mr-2"></i>QQ群：1078023378</li>
+                            <li><i class="fas fa-robot mr-2"></i>QQ机器人：LLOneBot（用于密码重置验证）</li>
+                            <li><i class="fas fa-envelope mr-2"></i>邮箱：support@kmno4.owo.vin</li>
+                            <li><i class="fas fa-globe mr-2"></i>官网：https://kmno4.owo.vin/</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6 px-6 mt-8">
+        <div class="container mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0 mobile-text-center">
+                    <h3 class="text-lg font-bold mb-2">KMnO4 MC服务器</h3>
+                    <p class="text-gray-300">账户状态管理系统</p>
+                </div>
+                <div class="flex space-x-6 mobile-space-y-4 mobile-stack">
+                    <a href="index.html" class="text-gray-300 hover:text-white transition-colors">主页</a>
+                    <a href="status.html" class="text-gray-300 hover:text-white transition-colors">服务器状态</a>
+                    <a href="download.html" class="text-gray-300 hover:text-white transition-colors">客户端下载</a>
+                    <a href="account_status.html" class="text-gray-300 hover:text-white transition-colors">账户状态</a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">
+                <p>&copy; 2026 KMnO4 MC服务器 - 账户状态页面</p>
+                <p class="mt-1">所有数据传输均加密 | 数据库多重权限隔离 | 最后更新：2026年1月</p>
+                <p class="mt-1">
+                    <i class="fas fa-shield mr-1"></i>
+                    <span class="text-green-400">安全等级：高</span> | 
+                    <i class="fas fa-database mr-1 ml-2"></i>
+                    MySQL权限分离 | 
+                    <i class="fas fa-lock mr-1 ml-2"></i>
+                    密码加密存储
+                </p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
