@@ -5,8 +5,8 @@
  */
 
 // API基础URL（通过FRPC穿透后的HTTP地址）
-// 注意：你的内网穿透地址是 http://kmno4_MySQLPHP.owo.vin
-window.API_BASE_URL = 'http://kmno4_MySQLPHP.owo.vin/api';
+// 注意：你的内网穿透地址是 https://kmno4_mysqlphp.owo.vin
+window.API_BASE_URL = 'https://kmno4_mysqlphp.owo.vin/api';
 
 // 网站配置
 window.SITE_CONFIG = {
@@ -28,7 +28,7 @@ window.SITE_CONFIG = {
         backupIp: 'sz.frp.one:47942',
         version: '1.20.1',
         qqGroup: '1078023378',
-        apiUrl: 'http://kmno4_MySQLPHP.owo.vin'
+        apiUrl: 'https://kmno4_mysqlphp.owo.vin'
     },
     
     // 安全配置
