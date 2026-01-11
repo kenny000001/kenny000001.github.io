@@ -207,9 +207,8 @@
     <script>
         // ===================== 配置项 =====================
         const SERVER_LINES = [
-            { name: "主线路", ip: "nb.2.frp.one", port: 50120 },
-            { name: "备用线路1", ip: "sz.frp.one", port: 47942 },
-            { name: "备用线路2", ip: "cd.4.frp.one", port: 34769 }
+            { name: "主线路", ip: "vip.xg.frp.one", port: 62310},
+            { name: "备用线路", ip: "vip.nj.2.frp.one", port: 60905},
         ];
         const REFRESH_INTERVAL = 30000; // 30秒自动刷新
         const SERVER_MAIN_PROTOCOL = "Java"; // 主协议
@@ -599,7 +598,7 @@
                 <span class="mobile-text-center">KMnO4 MC服务器</span>
             </h1>
             
-        <!-- 桌面端导航 -->
+                    <!-- 桌面端导航 -->
         <nav class="hidden md:block">
             <a href="index.html" class="text-white hover:text-purple-200 mx-2 font-medium">主页</a>
             <a href="status.html" class="text-white hover:text-purple-200 mx-2 font-medium">服务器状态</a>
@@ -620,6 +619,7 @@
                 <a href="account_status.html" class="text-white hover:text-purple-200 py-2 px-4 bg-purple-800 rounded-md text-center font-medium">账户状态</a>
             </div>
         </div>
+    </header>
 
     <main class="flex-grow container mx-auto px-4 md:px-8 py-6 md:py-8">
         <section class="bg-white rounded-xl shadow-md p-6 mb-8">
@@ -723,6 +723,7 @@
                     <a href="index.html" class="text-gray-300 hover:text-white transition-colors">主页</a>
                     <a href="status.html" class="text-gray-300 hover:text-white transition-colors">服务器状态</a>
                     <a href="download.html" class="text-gray-300 hover:text-white transition-colors">客户端下载</a>
+                    <a href="account_status.html" class="text-gray-300 hover:text-white transition-colors">账户状态</a>
                 </div>
             </div>
             <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">
